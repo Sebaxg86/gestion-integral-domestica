@@ -1,0 +1,79 @@
+# =========================
+# Sistema operativo
+# =========================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.Trash-*
+.nfs*
+
+# =========================
+# Variables de entorno
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+# Dependencias
+# =========================
+
+node_modules/
+
+# =========================
+# Builds y caché
+# =========================
+
+dist/
+build/
+.next/
+out/
+.cache/
+coverage/
+.tmp/
+temp/
+
+# =========================
+# Logs
+# =========================
+
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Editores e IDE
+# =========================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Archivos temporales
+# =========================
+
+*.tmp
+*.temp
