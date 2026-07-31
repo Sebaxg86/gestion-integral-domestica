@@ -23,6 +23,12 @@ Su objetivo es centralizar información doméstica importante y facilitar su con
 - ✅ Registro de mantenimientos, vencimientos, pendientes y recordatorios
 - ✅ Colaboración entre integrantes mediante usuarios, roles y permisos
 
+## 📖 Documentación
+
+- [Especificación general](Docs/1.Especificación_requerimentos.md)
+- [Estructura sugerida](Docs/2.Estructura_sugerida.md)
+- [Especificación funcional del MVP 0](Docs/3.Especificacion_MVP_0.md)
+
 ## 👨‍💻 Autor
 
 **Sebastián Chairez**  
