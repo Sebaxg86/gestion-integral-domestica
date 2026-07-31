@@ -30,6 +30,8 @@ Su objetivo es centralizar información doméstica importante y facilitar su con
 - [Especificación funcional del MVP 0](Docs/3.Especificacion_MVP_0.md)
 - [Modelo de datos del MVP 0](Docs/4.Modelo_datos_MVP_0.md)
 - [Matriz de permisos del MVP 0](Docs/5.Matriz_permisos_MVP_0.md)
+- [Flujos UX del MVP 0](Docs/6.Flujos_UX_MVP_0.md)
+- [Guía de diseño UI del MVP 0](Docs/7.Guia_diseno_UI_MVP_0.md)
 
 ## 👨‍💻 Autor
 
