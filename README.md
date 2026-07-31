@@ -29,6 +29,7 @@ Su objetivo es centralizar información doméstica importante y facilitar su con
 - [Estructura sugerida](Docs/2.Estructura_sugerida.md)
 - [Especificación funcional del MVP 0](Docs/3.Especificacion_MVP_0.md)
 - [Modelo de datos del MVP 0](Docs/4.Modelo_datos_MVP_0.md)
+- [Matriz de permisos del MVP 0](Docs/5.Matriz_permisos_MVP_0.md)
 
 ## 👨‍💻 Autor
 
