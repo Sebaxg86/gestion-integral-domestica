@@ -32,6 +32,7 @@ Su objetivo es centralizar información doméstica importante y facilitar su con
 - [Matriz de permisos del MVP 0](Docs/5.Matriz_permisos_MVP_0.md)
 - [Flujos UX del MVP 0](Docs/6.Flujos_UX_MVP_0.md)
 - [Guía de diseño UI del MVP 0](Docs/7.Guia_diseno_UI_MVP_0.md)
+- [Inventario del archivo de Figma](Docs/8.Inventario_Figma.md)
 
 ## 👨‍💻 Autor
 
