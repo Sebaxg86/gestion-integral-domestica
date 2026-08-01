@@ -23,9 +23,9 @@ export type AuthFormState = {
   errors?: Record<string, string[]>;
 };
 
-// ============== Gestión de autenticación ==============
-
-// ==== Convertir errores de validación ====
+// ============================================================================
+// Gestión de autenticación
+// ============================================================================
 
 function fieldErrors(error: {
   flatten: () => { fieldErrors: Record<string, string[] | undefined> };
@@ -36,12 +36,12 @@ function fieldErrors(error: {
   return Object.fromEntries(entries);
 }
 
-// ==== Registrar cuenta ====
-
 export async function signUpAction(
   _state: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  // ===== Validación de datos =====
+
   const result = signUpSchema.safeParse({
     fullName: formData.get("fullName"),
     email: formData.get("email"),
@@ -49,6 +49,8 @@ export async function signUpAction(
   });
 
   if (!result.success) return { errors: fieldErrors(result.error) };
+
+  // ===== Registro de la cuenta =====
 
   try {
     const supabase = await createClient();
@@ -75,18 +77,20 @@ export async function signUpAction(
   redirect("/verifica-tu-correo");
 }
 
-// ==== Iniciar sesión ====
-
 export async function signInAction(
   _state: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  // ===== Validación de credenciales =====
+
   const result = signInSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
 
   if (!result.success) return { errors: fieldErrors(result.error) };
+
+  // ===== Autenticación y política de actividad =====
 
   try {
     const supabase = await createClient();
@@ -111,15 +115,17 @@ export async function signInAction(
   redirect("/app");
 }
 
-// ==== Solicitar recuperación de contraseña ====
-
 export async function requestPasswordResetAction(
   _state: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  // ===== Validación del correo =====
+
   const result = emailSchema.safeParse(formData.get("email"));
   if (!result.success)
     return { errors: { email: [result.error.issues[0].message] } };
+
+  // ===== Envío del enlace de recuperación =====
 
   try {
     const supabase = await createClient();
@@ -137,18 +143,20 @@ export async function requestPasswordResetAction(
   };
 }
 
-// ==== Actualizar contraseña ====
-
 export async function updatePasswordAction(
   _state: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  // ===== Validación de la nueva contraseña =====
+
   const result = passwordSchema.safeParse(formData.get("password"));
   if (!result.success) {
     return {
       errors: { password: result.error.issues.map((issue) => issue.message) },
     };
   }
+
+  // ===== Persistencia de la contraseña =====
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password: result.data });
@@ -157,15 +165,18 @@ export async function updatePasswordAction(
   redirect("/app");
 }
 
-// ==== Reenviar verificación ====
-
 export async function resendVerificationAction(
   _state: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  // ===== Validación del correo =====
+
   const result = emailSchema.safeParse(formData.get("email"));
   if (!result.success)
     return { errors: { email: [result.error.issues[0].message] } };
+
+  // ===== Reenvío seguro del enlace =====
+
   try {
     const supabase = await createClient();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -182,9 +193,9 @@ export async function resendVerificationAction(
   };
 }
 
-// ==== Cerrar sesión ====
-
 export async function signOutAction() {
+  // ===== Invalidación de la sesión =====
+
   const supabase = await createClient();
   await supabase.auth.signOut();
   const cookieStore = await cookies();
@@ -192,5 +203,3 @@ export async function signOutAction() {
   cookieStore.delete(SESSION_POLICY_COOKIE);
   redirect("/login");
 }
-
-// ===================================================

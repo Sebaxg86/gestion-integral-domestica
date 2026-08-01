@@ -16,9 +16,9 @@ type ReplaceFileInput = {
   originalFilename: string;
 };
 
-// ============== Sustitución de archivos ==============
-
-// ==== Validar origen de la solicitud ====
+// ============================================================================
+// Sustitución segura de archivos documentales
+// ============================================================================
 
 function allowedOrigin(origin: string | null) {
   const appUrl = Deno.env.get("APP_URL");
@@ -31,8 +31,6 @@ function allowedOrigin(origin: string | null) {
     ? origin
     : (appUrl ?? "http://localhost:3000");
 }
-
-// ==== Construir respuesta HTTP ====
 
 function jsonResponse(body: unknown, status: number, origin: string | null) {
   return new Response(status === 204 ? null : JSON.stringify(body), {
@@ -49,9 +47,9 @@ function jsonResponse(body: unknown, status: number, origin: string | null) {
   });
 }
 
-// ==== Validar y sustituir archivo ====
-
 Deno.serve(async (request) => {
+  // ===== Validación del método y autorización =====
+
   const origin = request.headers.get("origin");
   if (request.method === "OPTIONS") return jsonResponse({}, 204, origin);
   if (request.method !== "POST")
@@ -66,6 +64,8 @@ Deno.serve(async (request) => {
     );
   }
   const accessToken = authorization.slice("Bearer ".length);
+
+  // ===== Validación de configuración y sesión =====
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const publishableKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -123,12 +123,16 @@ Deno.serve(async (request) => {
       origin,
     );
 
+  // ===== Consulta del archivo vigente =====
+
   const { data: currentFile } = await userClient
     .from("document_files")
     .select("id, storage_key")
     .eq("document_id", document.id)
     .eq("status", "active")
     .maybeSingle();
+
+  // ===== Descarga y validación del archivo temporal =====
 
   const stagedPath = `staging/${userData.user.id}/${input.uploadId}`;
   const finalPath = `families/${document.family_id}/documents/${document.id}/files/${input.fileId}`;
@@ -182,6 +186,8 @@ Deno.serve(async (request) => {
     );
   }
 
+  // ===== Persistencia del reemplazo =====
+
   const sha256 = toHex(await crypto.subtle.digest("SHA-256", fileBuffer));
   const { error: moveError } = await storage.move(stagedPath, finalPath);
   if (moveError)
@@ -218,6 +224,8 @@ Deno.serve(async (request) => {
     );
   }
 
+  // ===== Limpieza del archivo sustituido =====
+
   if (currentFile) {
     const { error: removeError } = await storage.remove([
       currentFile.storage_key,
@@ -233,5 +241,3 @@ Deno.serve(async (request) => {
 
   return jsonResponse({ document: updatedDocument }, 200, origin);
 });
-
-// ===================================================

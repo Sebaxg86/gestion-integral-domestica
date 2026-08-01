@@ -6,14 +6,16 @@ import { revalidatePath } from "next/cache";
 import { type FormState, getFieldErrors } from "@/features/shared/form-state";
 import { createClient } from "@/lib/supabase/server";
 
-// ============== Gestión de cuenta ==============
-
-// ==== Actualizar perfil ====
+// ============================================================================
+// Gestión de cuenta
+// ============================================================================
 
 export async function updateProfileAction(
   _state: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  // ===== Validación de datos =====
+
   const result = fullNameSchema.safeParse(formData.get("fullName"));
   if (!result.success)
     return {
@@ -22,6 +24,8 @@ export async function updateProfileAction(
   const version = Number(formData.get("version"));
   if (!Number.isSafeInteger(version))
     return { message: "La versión del perfil no es válida." };
+
+  // ===== Persistencia de cambios =====
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_profile", {
@@ -32,16 +36,19 @@ export async function updateProfileAction(
     return {
       message: "El perfil cambió o no pudo guardarse. Actualiza la página.",
     };
+
+  // ===== Actualización de la interfaz =====
+
   revalidatePath("/app/cuenta");
   return { message: "Perfil actualizado." };
 }
-
-// ==== Actualizar familia ====
 
 export async function updateFamilyAction(
   _state: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  // ===== Validación de datos =====
+
   const result = familySchema.safeParse({
     name: formData.get("name"),
     timezone: formData.get("timezone"),
@@ -51,6 +58,8 @@ export async function updateFamilyAction(
   const familyId = String(formData.get("familyId"));
   if (!familyId || !Number.isSafeInteger(version))
     return { message: "Los datos de la familia no son válidos." };
+
+  // ===== Persistencia de cambios =====
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_family", {
@@ -63,9 +72,10 @@ export async function updateFamilyAction(
     return {
       message: "La familia cambió o no pudo guardarse. Actualiza la página.",
     };
+
+  // ===== Actualización de la interfaz =====
+
   revalidatePath("/app/cuenta");
   revalidatePath("/app");
   return { message: "Configuración familiar actualizada." };
 }
-
-// ===================================================

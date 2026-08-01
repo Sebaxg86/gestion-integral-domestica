@@ -8,15 +8,13 @@ import { createClient } from "@/lib/supabase/browser";
 
 type PushState = "checking" | "unsupported" | "disabled" | "enabled";
 
-// ============== Configuración de notificaciones push ==============
-
-// ==== Obtener clave pública ====
+// ============================================================================
+// Configuración de notificaciones push
+// ============================================================================
 
 function getVapidPublicKey() {
   return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 }
-
-// ==== Convertir clave para PushManager ====
 
 function base64UrlToUint8Array(value: string) {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
@@ -26,12 +24,14 @@ function base64UrlToUint8Array(value: string) {
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
-// ==== Gestionar suscripción del dispositivo ====
-
 export function PushSettings({ userId }: { userId: string }) {
+  // ===== Estado del componente =====
+
   const [state, setState] = useState<PushState>("checking");
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
+
+  // ===== Comprobación de compatibilidad y suscripción =====
 
   useEffect(() => {
     async function checkSubscription() {
@@ -54,6 +54,8 @@ export function PushSettings({ userId }: { userId: string }) {
       setState("unsupported");
     });
   }, []);
+
+  // ===== Activación de notificaciones =====
 
   async function enablePush() {
     const vapidPublicKey = getVapidPublicKey();
@@ -109,6 +111,8 @@ export function PushSettings({ userId }: { userId: string }) {
     }
   }
 
+  // ===== Desactivación de notificaciones =====
+
   async function disablePush() {
     setPending(true);
     setMessage(undefined);
@@ -150,6 +154,8 @@ export function PushSettings({ userId }: { userId: string }) {
     );
   }
 
+  // ===== Renderizado del estado disponible =====
+
   if (state === "checking") {
     return (
       <p className="text-sm text-[var(--color-text-secondary)]">
@@ -188,5 +194,3 @@ export function PushSettings({ userId }: { userId: string }) {
     </div>
   );
 }
-
-// ===================================================

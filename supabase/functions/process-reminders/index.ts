@@ -18,9 +18,9 @@ type PushDelivery = {
   } | null;
 };
 
-// ============== Procesamiento de recordatorios ==============
-
-// ==== Construir respuesta HTTP ====
+// ============================================================================
+// Procesamiento de recordatorios y notificaciones push
+// ============================================================================
 
 function jsonResponse(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
@@ -32,9 +32,9 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
-// ==== Procesar vencimientos y entregas push ====
-
 Deno.serve(async (request) => {
+  // ===== Autorización de la ejecución programada =====
+
   if (request.method !== "POST") {
     return jsonResponse({ code: "METHOD_NOT_ALLOWED" }, 405);
   }
@@ -50,6 +50,8 @@ Deno.serve(async (request) => {
   if (!supabaseUrl || !serviceRoleKey) {
     return jsonResponse({ code: "SERVER_CONFIGURATION" }, 500);
   }
+
+  // ===== Procesamiento de recordatorios vencidos =====
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -69,6 +71,8 @@ Deno.serve(async (request) => {
     return jsonResponse({ processed: data, pushed: 0 }, 200);
   }
 
+  // ===== Consulta de entregas push pendientes =====
+
   webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
   const { data: deliveryRows, error: deliveryError } = await adminClient
     .from("push_deliveries")
@@ -83,6 +87,8 @@ Deno.serve(async (request) => {
   if (deliveryError) {
     return jsonResponse({ code: "PUSH_DELIVERY_QUERY_FAILED" }, 500);
   }
+
+  // ===== Envío y registro de resultados =====
 
   let pushed = 0;
   for (const delivery of (deliveryRows ?? []) as unknown as PushDelivery[]) {
@@ -155,5 +161,3 @@ Deno.serve(async (request) => {
 
   return jsonResponse({ processed: data, pushed }, 200);
 });
-
-// ===================================================

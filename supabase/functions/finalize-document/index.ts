@@ -24,9 +24,9 @@ type FinalizeDocumentInput = {
   originalFilename: string;
 };
 
-// ============== Finalización de documentos ==============
-
-// ==== Construir respuesta HTTP ====
+// ============================================================================
+// Finalización segura de documentos
+// ============================================================================
 
 function jsonResponse(body: unknown, status: number, origin: string | null) {
   return new Response(status === 204 ? null : JSON.stringify(body), {
@@ -43,8 +43,6 @@ function jsonResponse(body: unknown, status: number, origin: string | null) {
   });
 }
 
-// ==== Validar origen de la solicitud ====
-
 function allowedOrigin(origin: string | null) {
   const appUrl = Deno.env.get("APP_URL");
   const allowedOrigins = new Set([
@@ -56,8 +54,6 @@ function allowedOrigin(origin: string | null) {
     ? origin
     : (appUrl ?? "http://localhost:3000");
 }
-
-// ==== Validar entrada documental ====
 
 function isValidInput(input: FinalizeDocumentInput) {
   return (
@@ -74,9 +70,9 @@ function isValidInput(input: FinalizeDocumentInput) {
   );
 }
 
-// ==== Validar y almacenar documento ====
-
 Deno.serve(async (request) => {
+  // ===== Validación del método y autorización =====
+
   const origin = request.headers.get("origin");
 
   if (request.method === "OPTIONS") {
@@ -100,6 +96,8 @@ Deno.serve(async (request) => {
     );
   }
   const accessToken = authorization.slice("Bearer ".length);
+
+  // ===== Validación de configuración y sesión =====
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const publishableKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -152,6 +150,8 @@ Deno.serve(async (request) => {
       origin,
     );
   }
+
+  // ===== Descarga y validación del archivo temporal =====
 
   const stagedPath = `staging/${userData.user.id}/${input.uploadId}`;
   const finalPath = `families/${input.familyId}/documents/${input.documentId}/files/${input.fileId}`;
@@ -222,6 +222,8 @@ Deno.serve(async (request) => {
     );
   }
 
+  // ===== Persistencia del archivo y documento =====
+
   const sha256 = toHex(await crypto.subtle.digest("SHA-256", fileBuffer));
   const { error: moveError } = await storage.move(stagedPath, finalPath);
 
@@ -274,5 +276,3 @@ Deno.serve(async (request) => {
 
   return jsonResponse({ document }, 201, origin);
 });
-
-// ===================================================

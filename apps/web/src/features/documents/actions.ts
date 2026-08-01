@@ -7,16 +7,20 @@ import { redirect } from "next/navigation";
 import { type FormState, getFieldErrors } from "@/features/shared/form-state";
 import { createClient } from "@/lib/supabase/server";
 
-// ============== Gestión de documentos y recordatorios ==============
-
-// ==== Archivar documento ====
+// ============================================================================
+// Gestión de documentos y recordatorios
+// ============================================================================
 
 export async function setDocumentArchivedAction(formData: FormData) {
+  // ===== Extracción y validación de datos =====
+
   const documentId = String(formData.get("documentId"));
   const propertyId = String(formData.get("propertyId"));
   const version = Number(formData.get("version"));
   const archive = formData.get("archive") === "true";
   if (!documentId || !Number.isSafeInteger(version)) return;
+
+  // ===== Persistencia del estado =====
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_document_archived", {
@@ -26,19 +30,23 @@ export async function setDocumentArchivedAction(formData: FormData) {
   });
   if (error) return;
 
+  // ===== Actualización de la interfaz =====
+
   revalidatePath(`/app/viviendas/${propertyId}`);
   redirect(
     archive ? `/app/viviendas/${propertyId}` : `/app/documentos/${documentId}`,
   );
 }
 
-// ==== Atender recordatorio ====
-
 export async function attendReminderAction(formData: FormData) {
+  // ===== Extracción y validación de datos =====
+
   const reminderId = String(formData.get("reminderId"));
   const documentId = String(formData.get("documentId"));
   const version = Number(formData.get("version"));
   if (!reminderId || !Number.isSafeInteger(version)) return;
+
+  // ===== Persistencia y actualización de la interfaz =====
 
   const supabase = await createClient();
   await supabase.rpc("attend_reminder", {
@@ -49,9 +57,9 @@ export async function attendReminderAction(formData: FormData) {
   revalidatePath("/app");
 }
 
-// ==== Crear recordatorio ====
-
 export async function createReminderAction(formData: FormData) {
+  // ===== Normalización y validación de la configuración =====
+
   const documentId = String(formData.get("documentId"));
   const leadDays = Number(formData.get("leadDays"));
   const repeatValue = String(formData.get("repeatIntervalDays") ?? "");
@@ -63,6 +71,8 @@ export async function createReminderAction(formData: FormData) {
   )
     return;
 
+  // ===== Creación y actualización de la interfaz =====
+
   const supabase = await createClient();
   await supabase.rpc("create_reminder", {
     reminder_id: crypto.randomUUID(),
@@ -73,12 +83,12 @@ export async function createReminderAction(formData: FormData) {
   revalidatePath(`/app/documentos/${documentId}`);
 }
 
-// ==== Actualizar documento ====
-
 export async function updateDocumentAction(
   _state: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  // ===== Validación de datos editables =====
+
   const result = documentSchema.safeParse({
     name: formData.get("name"),
     category: formData.get("category"),
@@ -90,10 +100,14 @@ export async function updateDocumentAction(
   });
   if (!result.success) return { errors: getFieldErrors(result.error) };
 
+  // ===== Validación de identidad y versión =====
+
   const documentId = String(formData.get("documentId"));
   const version = Number(formData.get("version"));
   if (!documentId || !Number.isSafeInteger(version))
     return { message: "Los datos del documento no son válidos." };
+
+  // ===== Persistencia de cambios =====
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_document", {
@@ -111,17 +125,23 @@ export async function updateDocumentAction(
     return {
       message: "El documento cambió o no pudo guardarse. Actualiza la página.",
     };
+
+  // ===== Actualización de la interfaz =====
+
   revalidatePath(`/app/documentos/${documentId}`);
   redirect(`/app/documentos/${documentId}`);
 }
 
-// ==== Cancelar recordatorio ====
-
 export async function cancelReminderAction(formData: FormData) {
+  // ===== Extracción y validación de datos =====
+
   const reminderId = String(formData.get("reminderId"));
   const documentId = String(formData.get("documentId"));
   const version = Number(formData.get("version"));
   if (!reminderId || !Number.isSafeInteger(version)) return;
+
+  // ===== Persistencia y actualización de la interfaz =====
+
   const supabase = await createClient();
   await supabase.rpc("cancel_reminder", {
     target_reminder_id: reminderId,
@@ -130,9 +150,9 @@ export async function cancelReminderAction(formData: FormData) {
   revalidatePath(`/app/documentos/${documentId}`);
 }
 
-// ==== Actualizar recordatorio ====
-
 export async function updateReminderAction(formData: FormData) {
+  // ===== Normalización y validación de la configuración =====
+
   const reminderId = String(formData.get("reminderId"));
   const documentId = String(formData.get("documentId"));
   const version = Number(formData.get("version"));
@@ -146,6 +166,9 @@ export async function updateReminderAction(formData: FormData) {
     (repeatIntervalDays !== null && ![1, 7].includes(repeatIntervalDays))
   )
     return;
+
+  // ===== Persistencia y actualización de la interfaz =====
+
   const supabase = await createClient();
   await supabase.rpc("update_reminder", {
     target_reminder_id: reminderId,
@@ -155,5 +178,3 @@ export async function updateReminderAction(formData: FormData) {
   });
   revalidatePath(`/app/documentos/${documentId}`);
 }
-
-// ===================================================

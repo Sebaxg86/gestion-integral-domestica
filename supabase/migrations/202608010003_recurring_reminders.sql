@@ -1,7 +1,15 @@
+-- ============================================================================
+-- Recordatorios recurrentes
+-- ============================================================================
+
+-- ===== Ampliación del modelo de recordatorios =====
+
 alter table public.reminders
   add column repeat_interval_days smallint,
   add constraint reminders_repeat_interval_allowed
     check (repeat_interval_days is null or repeat_interval_days in (1, 7));
+
+-- ===== Identificación única de cada envío =====
 
 alter table public.notifications add column occurrence_at timestamptz;
 
@@ -14,6 +22,8 @@ alter table public.notifications
   drop constraint notifications_reminder_recipient_unique,
   add constraint notifications_reminder_recipient_occurrence_unique
     unique (reminder_id, recipient_user_id, occurrence_at);
+
+-- ===== Procesamiento inmediato por familia =====
 
 create or replace function public.notify_due_reminders_for_family(
   target_family_id uuid,
@@ -28,6 +38,8 @@ declare
   due_reminder record;
   processed_count integer := 0;
 begin
+  -- ===== Consulta y bloqueo de recordatorios vencidos =====
+
   for due_reminder in
     select
       reminder.id,
@@ -54,6 +66,8 @@ begin
     for update of reminder skip locked
     limit batch_size
   loop
+    -- ===== Creación idempotente de la notificación =====
+
     insert into public.notifications (
       family_id, reminder_id, recipient_user_id, title, message, occurrence_at
     ) values (
@@ -72,6 +86,8 @@ begin
       due_reminder.scheduled_for
     ) on conflict (reminder_id, recipient_user_id, occurrence_at) do nothing;
 
+    -- ===== Programación de la siguiente repetición =====
+
     update public.reminders
     set status = 'notified',
         notified_at = coalesce(notified_at, statement_timestamp()),
@@ -86,9 +102,13 @@ begin
     processed_count := processed_count + 1;
   end loop;
 
+  -- ===== Retorno del resultado =====
+
   return processed_count;
 end;
 $$;
+
+-- ===== Creación de recordatorios =====
 
 drop function if exists public.create_reminder(uuid, uuid, smallint);
 
@@ -110,9 +130,13 @@ declare
   created_reminder public.reminders;
   existing_reminder public.reminders;
 begin
+  -- ===== Validación de la frecuencia =====
+
   if reminder_repeat_interval_days is not null and reminder_repeat_interval_days not in (1, 7) then
     raise exception using errcode = '22023', message = 'La frecuencia debe ser diaria, semanal o sin repetición.';
   end if;
+
+  -- ===== Consulta del documento autorizado =====
 
   select document.*
   into document_record
@@ -130,6 +154,8 @@ begin
     raise exception using errcode = 'P0002', message = 'El documento no existe, está archivado o no tiene vencimiento.';
   end if;
 
+  -- ===== Validación de idempotencia =====
+
   select timezone into family_timezone from public.families where id = document_record.family_id;
   select * into existing_reminder from public.reminders where id = reminder_id;
 
@@ -143,6 +169,8 @@ begin
     raise exception using errcode = '23505', message = 'El identificador del recordatorio ya está en uso.';
   end if;
 
+  -- ===== Persistencia del recordatorio =====
+
   insert into public.reminders (
     id, family_id, document_id, lead_days, repeat_interval_days, scheduled_for,
     created_by_user_id, updated_by_user_id
@@ -153,11 +181,15 @@ begin
     current_user_id, current_user_id
   ) returning * into created_reminder;
 
+  -- ===== Procesamiento inmediato cuando el aviso ya venció =====
+
   perform public.notify_due_reminders_for_family(document_record.family_id, 1);
   select * into created_reminder from public.reminders where id = reminder_id;
   return created_reminder;
 end;
 $$;
+
+-- ===== Actualización de recordatorios =====
 
 drop function if exists public.update_reminder(uuid, smallint, bigint);
 
@@ -176,9 +208,13 @@ declare
   current_user_id uuid := public.require_authenticated_user();
   updated_reminder public.reminders;
 begin
+  -- ===== Validación de la frecuencia =====
+
   if reminder_repeat_interval_days is not null and reminder_repeat_interval_days not in (1, 7) then
     raise exception using errcode = '22023', message = 'La frecuencia debe ser diaria, semanal o sin repetición.';
   end if;
+
+  -- ===== Actualización con control de versión y permisos =====
 
   update public.reminders as reminder
   set lead_days = reminder_lead_days,
@@ -206,11 +242,15 @@ begin
     raise exception using errcode = 'P0002', message = 'El recordatorio no existe, no está programado o cambió en otra sesión.';
   end if;
 
+  -- ===== Procesamiento inmediato cuando el nuevo horario ya venció =====
+
   perform public.notify_due_reminders_for_family(updated_reminder.family_id, 1);
   select * into updated_reminder from public.reminders where id = target_reminder_id;
   return updated_reminder;
 end;
 $$;
+
+-- ===== Procesamiento programado de recordatorios =====
 
 create or replace function public.process_due_reminders(batch_size integer default 100)
 returns integer
@@ -222,12 +262,16 @@ declare
   due_reminder record;
   processed_count integer := 0;
 begin
+  -- ===== Validación de autorización y lote =====
+
   if auth.role() <> 'service_role' then
     raise exception using errcode = '42501', message = 'La operación requiere el proceso de recordatorios.';
   end if;
   if batch_size < 1 or batch_size > 500 then
     raise exception using errcode = '22023', message = 'El tamaño de lote debe estar entre 1 y 500.';
   end if;
+
+  -- ===== Consulta y bloqueo de recordatorios vencidos =====
 
   for due_reminder in
     select reminder.id, reminder.family_id, reminder.scheduled_for,
@@ -248,6 +292,8 @@ begin
     for update of reminder skip locked
     limit batch_size
   loop
+    -- ===== Creación idempotente de la notificación =====
+
     insert into public.notifications (
       family_id, reminder_id, recipient_user_id, title, message, occurrence_at
     ) values (
@@ -257,6 +303,8 @@ begin
         to_char(due_reminder.expiration_date, 'DD/MM/YYYY')), 500),
       due_reminder.scheduled_for
     ) on conflict (reminder_id, recipient_user_id, occurrence_at) do nothing;
+
+    -- ===== Programación de la siguiente repetición =====
 
     update public.reminders
     set status = 'notified',
@@ -268,9 +316,14 @@ begin
       and (status = 'scheduled' or (status = 'notified' and repeat_interval_days is not null));
     processed_count := processed_count + 1;
   end loop;
+
+  -- ===== Retorno del resultado =====
+
   return processed_count;
 end;
 $$;
+
+-- ===== Permisos de ejecución =====
 
 revoke all on function public.create_reminder(uuid, uuid, smallint, smallint) from public, anon, authenticated;
 revoke all on function public.update_reminder(uuid, smallint, bigint, smallint) from public, anon, authenticated;

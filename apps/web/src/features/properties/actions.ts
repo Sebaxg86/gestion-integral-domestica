@@ -8,14 +8,16 @@ import { type FormState, getFieldErrors } from "@/features/shared/form-state";
 import { getSessionContext } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
-// ============== Gestión de viviendas ==============
-
-// ==== Crear vivienda ====
+// ============================================================================
+// Gestión de viviendas
+// ============================================================================
 
 export async function createPropertyAction(
   _state: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  // ===== Validación de datos =====
+
   const result = propertySchema.safeParse({
     name: formData.get("name"),
     type: formData.get("type"),
@@ -23,8 +25,12 @@ export async function createPropertyAction(
   });
   if (!result.success) return { errors: getFieldErrors(result.error) };
 
+  // ===== Consulta del contexto familiar =====
+
   const context = await getSessionContext();
   if (!context?.family) return { message: "Tu sesión ya no es válida." };
+
+  // ===== Creación de la vivienda =====
 
   const propertyId = crypto.randomUUID();
   const supabase = await createClient();
@@ -41,13 +47,15 @@ export async function createPropertyAction(
   redirect(`/app/viviendas/${propertyId}`);
 }
 
-// ==== Archivar vivienda ====
-
 export async function setPropertyArchivedAction(formData: FormData) {
+  // ===== Extracción y validación de datos =====
+
   const propertyId = String(formData.get("propertyId"));
   const version = Number(formData.get("version"));
   const archive = formData.get("archive") === "true";
   if (!propertyId || !Number.isSafeInteger(version)) return;
+
+  // ===== Persistencia del estado =====
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_property_archived", {
@@ -57,16 +65,18 @@ export async function setPropertyArchivedAction(formData: FormData) {
   });
   if (error) return;
 
+  // ===== Actualización de la interfaz =====
+
   revalidatePath("/app/viviendas");
   redirect(archive ? "/app/viviendas" : `/app/viviendas/${propertyId}`);
 }
-
-// ==== Actualizar vivienda ====
 
 export async function updatePropertyAction(
   _state: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  // ===== Validación de datos editables =====
+
   const result = propertySchema.safeParse({
     name: formData.get("name"),
     type: formData.get("type"),
@@ -74,10 +84,14 @@ export async function updatePropertyAction(
   });
   if (!result.success) return { errors: getFieldErrors(result.error) };
 
+  // ===== Validación de identidad y versión =====
+
   const propertyId = String(formData.get("propertyId"));
   const version = Number(formData.get("version"));
   if (!propertyId || !Number.isSafeInteger(version))
     return { message: "Los datos de la vivienda no son válidos." };
+
+  // ===== Persistencia de cambios =====
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_property", {
@@ -91,8 +105,9 @@ export async function updatePropertyAction(
     return {
       message: "La vivienda cambió o no pudo guardarse. Actualiza la página.",
     };
+
+  // ===== Actualización de la interfaz =====
+
   revalidatePath(`/app/viviendas/${propertyId}`);
   redirect(`/app/viviendas/${propertyId}`);
 }
-
-// ===================================================

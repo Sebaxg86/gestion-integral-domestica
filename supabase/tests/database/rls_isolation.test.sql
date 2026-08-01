@@ -1,9 +1,13 @@
 begin;
 
+-- ===== Preparación del entorno de pruebas =====
+
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
 select plan(13);
+
+-- ===== Preparación de usuarios y recursos aislados =====
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -53,6 +57,8 @@ insert into public.documents (
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
 
+-- ===== Verificación del aislamiento por familia =====
+
 select is((select count(*) from public.users), 1::bigint, 'el perfil propio es visible');
 select is((select count(*) from public.families), 1::bigint, 'solo la familia propia es visible');
 select is((select count(*) from public.properties), 1::bigint, 'solo la vivienda propia es visible');
@@ -80,6 +86,8 @@ select throws_ok(
 
 select is((select count(*) from public.properties), 2::bigint, 'la creación propia queda visible');
 select is((select count(*) from public.properties where family_id = '22000000-0000-4000-8000-000000000002'), 0::bigint, 'la familia ajena continúa oculta');
+
+-- ===== Verificación de recordatorios recurrentes =====
 
 select lives_ok(
   $$select public.create_reminder(
@@ -109,6 +117,8 @@ select ok(
   (select scheduled_for > statement_timestamp() from public.reminders where id = '11111100-0000-4000-8000-000000000001'),
   'la siguiente repetición queda programada en el futuro'
 );
+
+-- ===== Limpieza del escenario =====
 
 select * from finish();
 rollback;
