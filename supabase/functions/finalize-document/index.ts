@@ -89,6 +89,7 @@ Deno.serve(async (request) => {
       origin,
     );
   }
+  const accessToken = authorization.slice("Bearer ".length);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const publishableKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -113,7 +114,8 @@ Deno.serve(async (request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data: userData, error: userError } = await userClient.auth.getUser();
+  const { data: userData, error: userError } =
+    await userClient.auth.getUser(accessToken);
   if (userError || !userData.user) {
     return jsonResponse(
       { code: "UNAUTHORIZED", message: "La sesión ya no es válida." },
