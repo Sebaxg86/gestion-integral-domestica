@@ -4,9 +4,15 @@ import { Button, Field, FieldLabel, FieldMessage, Input } from "@gid/ui";
 import { documentSchema } from "@gid/validation";
 import { ArrowLeft, FileUp, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type ChangeEvent, type FormEvent, useState } from "react";
 
 import { createClient } from "@/lib/supabase/browser";
+
+import {
+  getDocumentNameFromFilename,
+  getFileError,
+  getFunctionErrorMessage,
+} from "./file-upload";
 
 const categories = [
   ["deed", "Escritura"],
@@ -33,7 +39,9 @@ export function DocumentForm({
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [file, setFile] = useState<File | null>(null);
+  const [name, setName] = useState("");
   const [pending, setPending] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>();
   const [message, setMessage] = useState<string>();
   const [errors, setErrors] = useState<Record<string, string[]>>({});
 
@@ -48,14 +56,12 @@ export function DocumentForm({
       });
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors as Record<string, string[]>);
+      setMessage("Revisa los datos marcados para continuar.");
       return;
     }
-    if (!file) {
-      setMessage("Selecciona un archivo PDF, JPEG o PNG.");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setMessage("El archivo debe pesar como máximo 10 MiB.");
+    const fileError = getFileError(file);
+    if (fileError) {
+      setMessage(fileError);
       return;
     }
     setErrors({});
@@ -65,104 +71,134 @@ export function DocumentForm({
 
   async function submitDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!file) return;
+    const selectedFile = file;
+    const fileError = getFileError(selectedFile);
+    if (fileError) {
+      setMessage(fileError);
+      return;
+    }
+    if (!selectedFile) return;
     setPending(true);
     setMessage(undefined);
+    setUploadStatus("Preparando la carga segura…");
 
-    const formData = new FormData(event.currentTarget);
-    const result = documentSchema.safeParse({
-      name: formData.get("name"),
-      category: formData.get("category"),
-      issueDate: String(formData.get("issueDate") ?? "") || undefined,
-      expirationDate: String(formData.get("expirationDate") ?? "") || undefined,
-      issuer: String(formData.get("issuer") ?? "") || undefined,
-      documentNumber: String(formData.get("documentNumber") ?? "") || undefined,
-      notes: String(formData.get("notes") ?? "") || undefined,
-      leadDays: formData.get("leadDays") ? formData.get("leadDays") : undefined,
-    });
-
-    if (!result.success) {
-      setErrors(result.error.flatten().fieldErrors as Record<string, string[]>);
-      setPending(false);
-      return;
-    }
-
-    const supabase = createClient();
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
-      setMessage("Tu sesión expiró. Inicia sesión de nuevo.");
-      setPending(false);
-      return;
-    }
-
-    const uploadId = crypto.randomUUID();
-    const documentId = crypto.randomUUID();
-    const fileId = crypto.randomUUID();
-    const stagedPath = `staging/${userData.user.id}/${uploadId}`;
-    const { error: uploadError } = await supabase.storage
-      .from("documents")
-      .upload(stagedPath, file, {
-        cacheControl: "no-cache",
-        contentType: file.type || "application/octet-stream",
-        upsert: false,
+    try {
+      const formData = new FormData(event.currentTarget);
+      const result = documentSchema.safeParse({
+        name: formData.get("name"),
+        category: formData.get("category"),
+        issueDate: String(formData.get("issueDate") ?? "") || undefined,
+        expirationDate: String(formData.get("expirationDate") ?? "") || undefined,
+        issuer: String(formData.get("issuer") ?? "") || undefined,
+        documentNumber: String(formData.get("documentNumber") ?? "") || undefined,
+        notes: String(formData.get("notes") ?? "") || undefined,
+        leadDays: formData.get("leadDays")
+          ? formData.get("leadDays")
+          : undefined,
       });
 
-    if (uploadError) {
-      setMessage(
-        "No pudimos cargar el archivo. Revisa el formato y tu conexión.",
-      );
-      setPending(false);
-      return;
-    }
-
-    const { error: finalizeError } = await supabase.functions.invoke(
-      "finalize-document",
-      {
-        body: {
-          uploadId,
-          documentId,
-          fileId,
-          familyId,
-          propertyId,
-          name: result.data.name,
-          category: result.data.category,
-          issueDate: result.data.issueDate || null,
-          expirationDate: result.data.expirationDate || null,
-          issuer: result.data.issuer || null,
-          documentNumber: result.data.documentNumber || null,
-          notes: result.data.notes || null,
-          originalFilename: file.name,
-        },
-      },
-    );
-
-    if (finalizeError) {
-      setMessage(
-        "No pudimos validar y guardar el documento. Revisa el archivo e intenta de nuevo.",
-      );
-      setPending(false);
-      return;
-    }
-
-    if (result.data.expirationDate && result.data.leadDays !== undefined) {
-      const { error: reminderError } = await supabase.rpc("create_reminder", {
-        reminder_id: crypto.randomUUID(),
-        target_document_id: documentId,
-        reminder_lead_days: result.data.leadDays,
-      });
-      if (reminderError) {
-        setMessage(
-          "El documento se guardó, pero el aviso no pudo crearse. Puedes configurarlo desde su detalle.",
-        );
+      if (!result.success) {
+        setErrors(result.error.flatten().fieldErrors as Record<string, string[]>);
+        setMessage("Revisa los datos marcados antes de guardar.");
+        return;
       }
-    }
 
-    router.push(`/app/documentos/${documentId}`);
-    router.refresh();
+      const supabase = createClient();
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        setMessage("Tu sesión expiró. Inicia sesión de nuevo.");
+        return;
+      }
+
+      const uploadId = crypto.randomUUID();
+      const documentId = crypto.randomUUID();
+      const fileId = crypto.randomUUID();
+      const stagedPath = `staging/${userData.user.id}/${uploadId}`;
+      setUploadStatus("Subiendo el archivo…");
+      const { error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(stagedPath, selectedFile, {
+          cacheControl: "no-cache",
+          contentType: selectedFile.type || "application/octet-stream",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        setMessage("No pudimos cargar el archivo. Revisa tu conexión e intenta de nuevo.");
+        return;
+      }
+
+      setUploadStatus("Validando y guardando el documento…");
+      const { error: finalizeError } = await supabase.functions.invoke(
+        "finalize-document",
+        {
+          body: {
+            uploadId,
+            documentId,
+            fileId,
+            familyId,
+            propertyId,
+            name: result.data.name,
+            category: result.data.category,
+            issueDate: result.data.issueDate || null,
+            expirationDate: result.data.expirationDate || null,
+            issuer: result.data.issuer || null,
+            documentNumber: result.data.documentNumber || null,
+            notes: result.data.notes || null,
+            originalFilename: selectedFile.name,
+          },
+        },
+      );
+
+      if (finalizeError) {
+        setMessage(
+          await getFunctionErrorMessage(
+            finalizeError,
+            "No pudimos validar y guardar el documento. Intenta de nuevo.",
+          ),
+        );
+        return;
+      }
+
+      if (result.data.expirationDate && result.data.leadDays !== undefined) {
+        const { error: reminderError } = await supabase.rpc("create_reminder", {
+          reminder_id: crypto.randomUUID(),
+          target_document_id: documentId,
+          reminder_lead_days: result.data.leadDays,
+        });
+        if (reminderError) {
+          setMessage(
+            "El documento se guardó, pero el aviso no pudo crearse. Puedes configurarlo desde su detalle.",
+          );
+        }
+      }
+
+      router.push(`/app/documentos/${documentId}`);
+      router.refresh();
+    } catch {
+      setMessage(
+        "Ocurrió un problema al guardar el documento. Revisa tu conexión e intenta de nuevo.",
+      );
+    } finally {
+      setPending(false);
+      setUploadStatus(undefined);
+    }
+  }
+
+  function selectFile(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.target.files?.[0] ?? null;
+    setFile(selectedFile);
+    setMessage(getFileError(selectedFile));
+    setErrors({});
+
+    if (selectedFile && !name.trim()) {
+      setName(getDocumentNameFromFilename(selectedFile.name));
+    }
   }
 
   return (
     <form
+      noValidate
       onSubmit={step === 1 ? continueToDates : submitDocument}
       className="grid gap-5"
     >
@@ -178,6 +214,23 @@ export function DocumentForm({
           {message}
         </p>
       ) : null}
+      {uploadStatus ? (
+        <div
+          className="rounded-xl bg-[var(--color-brand-100)] p-3 text-sm text-[var(--color-brand-900)]"
+          role="status"
+          aria-live="polite"
+        >
+          <p>{uploadStatus}</p>
+          <div
+            className="mt-2 h-1 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-brand-700)_20%,transparent)]"
+            role="progressbar"
+            aria-label="Carga del documento en curso"
+            aria-valuetext={uploadStatus}
+          >
+            <div className="h-full w-2/5 animate-pulse rounded-full bg-[var(--color-brand-700)]" />
+          </div>
+        </div>
+      ) : null}
 
       <div
         className={step === 1 ? "grid gap-5" : "hidden"}
@@ -185,7 +238,13 @@ export function DocumentForm({
       >
         <Field>
           <FieldLabel htmlFor="name">Nombre del documento</FieldLabel>
-          <Input id="name" name="name" invalid={Boolean(errors.name)} />
+          <Input
+            id="name"
+            name="name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            invalid={Boolean(errors.name)}
+          />
           <FieldMessage error>{errors.name?.[0]}</FieldMessage>
         </Field>
         <Field>
@@ -228,7 +287,7 @@ export function DocumentForm({
             id="file"
             type="file"
             accept="application/pdf,image/jpeg,image/png"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            onChange={selectFile}
           />
         </Field>
         <details className="rounded-xl border bg-white p-4">
