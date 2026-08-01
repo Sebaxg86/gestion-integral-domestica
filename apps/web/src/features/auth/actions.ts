@@ -6,8 +6,16 @@ import {
   signInSchema,
   signUpSchema,
 } from "@gid/validation";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import {
+  activityCookieOptions,
+  policyCookieOptions,
+  SESSION_ACTIVITY_COOKIE,
+  SESSION_POLICY_COOKIE,
+  SESSION_POLICY_VERSION,
+} from "@/lib/supabase/cookie-options";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = {
@@ -77,6 +85,17 @@ export async function signInAction(
     const { error } = await supabase.auth.signInWithPassword(result.data);
     if (error)
       return { message: "El correo o la contraseña no son correctos." };
+    const cookieStore = await cookies();
+    cookieStore.set(
+      SESSION_ACTIVITY_COOKIE,
+      String(Math.floor(Date.now() / 1000)),
+      activityCookieOptions,
+    );
+    cookieStore.set(
+      SESSION_POLICY_COOKIE,
+      SESSION_POLICY_VERSION,
+      policyCookieOptions,
+    );
   } catch {
     return { message: "Supabase todavía no está configurado en este entorno." };
   }
@@ -152,5 +171,8 @@ export async function resendVerificationAction(
 export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  const cookieStore = await cookies();
+  cookieStore.delete(SESSION_ACTIVITY_COOKIE);
+  cookieStore.delete(SESSION_POLICY_COOKIE);
   redirect("/login");
 }
