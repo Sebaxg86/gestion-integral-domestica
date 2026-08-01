@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   },
   description:
     "Organiza viviendas, documentos y vencimientos familiares en un solo lugar.",
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+    icon: "/icons/icon.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -31,7 +35,11 @@ export const viewport: Viewport = {
   colorScheme: "light",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="es">
       <body>

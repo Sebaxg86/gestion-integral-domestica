@@ -13,6 +13,10 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@gid/config": "workspace:*",
+    "@gid/types": "workspace:*",
+    "@gid/ui": "workspace:*",
+    "@gid/validation": "workspace:*",
     "@hookform/resolvers": "latest",
     "@radix-ui/react-avatar": "latest",
     "@radix-ui/react-dialog": "latest",
@@ -43,9 +47,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
+    "jsdom": "26.1.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vite-tsconfig-paths": "latest",
-    "vitest": "latest"
+    "vite": "6.4.3",
+    "vitest": "3.2.4"
   }
 }
