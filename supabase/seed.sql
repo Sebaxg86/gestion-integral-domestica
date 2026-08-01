@@ -1,0 +1,2 @@
+-- Las semillas del MVP se crean desde las pruebas para no duplicar identidades
+-- administradas por Supabase Auth.
