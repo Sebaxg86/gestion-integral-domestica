@@ -1,5 +1,8 @@
 begin;
 
+create extension if not exists pgtap with schema extensions;
+set local search_path = public, extensions;
+
 select plan(11);
 
 insert into auth.users (
@@ -82,7 +85,7 @@ select lives_ok(
   $$select public.create_reminder(
     '11111100-0000-4000-8000-000000000001',
     '11111000-0000-4000-8000-000000000001',
-    0
+    0::smallint
   )$$,
   'un recordatorio vencido se procesa al crearse'
 );

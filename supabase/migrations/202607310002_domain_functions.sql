@@ -661,8 +661,8 @@ declare
   created_reminder public.reminders;
   existing_reminder public.reminders;
 begin
-  select document, family.timezone
-  into document_record, family_timezone
+  select document.*
+  into document_record
   from public.documents as document
   join public.properties as property
     on property.family_id = document.family_id and property.id = document.property_id
@@ -676,6 +676,11 @@ begin
   if document_record.id is null then
     raise exception using errcode = 'P0002', message = 'El documento no existe, está archivado o no tiene vencimiento.';
   end if;
+
+  select timezone
+  into family_timezone
+  from public.families
+  where id = document_record.family_id;
 
   select * into existing_reminder from public.reminders
   where id = reminder_id;
