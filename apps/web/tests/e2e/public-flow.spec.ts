@@ -15,24 +15,12 @@ test("la portada conduce al registro sin desplazamiento horizontal", async ({
   await expect(
     page.getByRole("heading", { name: "Crea tu cuenta" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Continuar con Google" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Continuar con Apple" }),
-  ).toBeVisible();
 });
 
 test("el formulario de acceso muestra sus controles esenciales", async ({
   page,
 }) => {
   await page.goto("/login");
-  await expect(
-    page.getByRole("button", { name: "Continuar con Google" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Continuar con Apple" }),
-  ).toBeVisible();
   await expect(page.getByLabel("Correo electrónico")).toBeVisible();
   await expect(page.getByLabel("Contraseña")).toBeVisible();
   await expect(

@@ -1,18 +1,8 @@
 import Link from "next/link";
 
-import {
-  OAuthButtons,
-  OAuthErrorNotice,
-  SignUpForm,
-} from "@/features/auth/auth-form";
+import { SignUpForm } from "@/features/auth/auth-form";
 
-export default async function RegisterPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const { error } = await searchParams;
-
+export default function RegisterPage() {
   return (
     <div className="grid gap-7">
       <div>
@@ -27,10 +17,6 @@ export default async function RegisterPage({
           vivienda.
         </p>
       </div>
-      {error === "oauth_failed" ? (
-        <OAuthErrorNotice context="registro" />
-      ) : null}
-      <OAuthButtons returnTo="/registro" />
       <SignUpForm />
       <p className="text-center text-sm text-[var(--color-text-secondary)]">
         ¿Ya tienes cuenta?{" "}

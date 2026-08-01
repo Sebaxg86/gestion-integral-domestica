@@ -6,13 +6,10 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const requestedNext = url.searchParams.get("next");
-  const requestedReturnPath = url.searchParams.get("returnTo");
   const next =
     requestedNext?.startsWith("/") && !requestedNext.startsWith("//")
       ? requestedNext
       : "/app";
-  const returnPath =
-    requestedReturnPath === "/registro" ? "/registro" : "/login";
 
   if (code) {
     const supabase = await createClient();
@@ -21,6 +18,6 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.redirect(
-    new URL(`${returnPath}?error=oauth_failed`, url.origin),
+    new URL("/login?error=invalid_link", url.origin),
   );
 }
