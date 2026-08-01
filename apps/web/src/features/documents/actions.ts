@@ -7,6 +7,10 @@ import { redirect } from "next/navigation";
 import { type FormState, getFieldErrors } from "@/features/shared/form-state";
 import { createClient } from "@/lib/supabase/server";
 
+// ============== Gestión de documentos y recordatorios ==============
+
+// ==== Archivar documento ====
+
 export async function setDocumentArchivedAction(formData: FormData) {
   const documentId = String(formData.get("documentId"));
   const propertyId = String(formData.get("propertyId"));
@@ -28,6 +32,8 @@ export async function setDocumentArchivedAction(formData: FormData) {
   );
 }
 
+// ==== Atender recordatorio ====
+
 export async function attendReminderAction(formData: FormData) {
   const reminderId = String(formData.get("reminderId"));
   const documentId = String(formData.get("documentId"));
@@ -42,6 +48,8 @@ export async function attendReminderAction(formData: FormData) {
   revalidatePath(`/app/documentos/${documentId}`);
   revalidatePath("/app");
 }
+
+// ==== Crear recordatorio ====
 
 export async function createReminderAction(formData: FormData) {
   const documentId = String(formData.get("documentId"));
@@ -64,6 +72,8 @@ export async function createReminderAction(formData: FormData) {
   });
   revalidatePath(`/app/documentos/${documentId}`);
 }
+
+// ==== Actualizar documento ====
 
 export async function updateDocumentAction(
   _state: FormState,
@@ -105,6 +115,8 @@ export async function updateDocumentAction(
   redirect(`/app/documentos/${documentId}`);
 }
 
+// ==== Cancelar recordatorio ====
+
 export async function cancelReminderAction(formData: FormData) {
   const reminderId = String(formData.get("reminderId"));
   const documentId = String(formData.get("documentId"));
@@ -117,6 +129,8 @@ export async function cancelReminderAction(formData: FormData) {
   });
   revalidatePath(`/app/documentos/${documentId}`);
 }
+
+// ==== Actualizar recordatorio ====
 
 export async function updateReminderAction(formData: FormData) {
   const reminderId = String(formData.get("reminderId"));
@@ -141,3 +155,5 @@ export async function updateReminderAction(formData: FormData) {
   });
   revalidatePath(`/app/documentos/${documentId}`);
 }
+
+// ===================================================

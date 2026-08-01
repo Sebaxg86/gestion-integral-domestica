@@ -16,6 +16,10 @@ type ReplaceFileInput = {
   originalFilename: string;
 };
 
+// ============== Sustitución de archivos ==============
+
+// ==== Validar origen de la solicitud ====
+
 function allowedOrigin(origin: string | null) {
   const appUrl = Deno.env.get("APP_URL");
   const allowed = new Set([
@@ -27,6 +31,8 @@ function allowedOrigin(origin: string | null) {
     ? origin
     : (appUrl ?? "http://localhost:3000");
 }
+
+// ==== Construir respuesta HTTP ====
 
 function jsonResponse(body: unknown, status: number, origin: string | null) {
   return new Response(status === 204 ? null : JSON.stringify(body), {
@@ -42,6 +48,8 @@ function jsonResponse(body: unknown, status: number, origin: string | null) {
     },
   });
 }
+
+// ==== Validar y sustituir archivo ====
 
 Deno.serve(async (request) => {
   const origin = request.headers.get("origin");
@@ -225,3 +233,5 @@ Deno.serve(async (request) => {
 
   return jsonResponse({ document: updatedDocument }, 200, origin);
 });
+
+// ===================================================

@@ -18,6 +18,10 @@ type PushDelivery = {
   } | null;
 };
 
+// ============== Procesamiento de recordatorios ==============
+
+// ==== Construir respuesta HTTP ====
+
 function jsonResponse(body: unknown, status: number) {
   return new Response(JSON.stringify(body), {
     status,
@@ -27,6 +31,8 @@ function jsonResponse(body: unknown, status: number) {
     },
   });
 }
+
+// ==== Procesar vencimientos y entregas push ====
 
 Deno.serve(async (request) => {
   if (request.method !== "POST") {
@@ -149,3 +155,5 @@ Deno.serve(async (request) => {
 
   return jsonResponse({ processed: data, pushed }, 200);
 });
+
+// ===================================================

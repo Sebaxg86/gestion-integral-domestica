@@ -8,6 +8,10 @@ import { type FormState, getFieldErrors } from "@/features/shared/form-state";
 import { getSessionContext } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
+// ============== Gestión de viviendas ==============
+
+// ==== Crear vivienda ====
+
 export async function createPropertyAction(
   _state: FormState,
   formData: FormData,
@@ -37,6 +41,8 @@ export async function createPropertyAction(
   redirect(`/app/viviendas/${propertyId}`);
 }
 
+// ==== Archivar vivienda ====
+
 export async function setPropertyArchivedAction(formData: FormData) {
   const propertyId = String(formData.get("propertyId"));
   const version = Number(formData.get("version"));
@@ -54,6 +60,8 @@ export async function setPropertyArchivedAction(formData: FormData) {
   revalidatePath("/app/viviendas");
   redirect(archive ? "/app/viviendas" : `/app/viviendas/${propertyId}`);
 }
+
+// ==== Actualizar vivienda ====
 
 export async function updatePropertyAction(
   _state: FormState,
@@ -86,3 +94,5 @@ export async function updatePropertyAction(
   revalidatePath(`/app/viviendas/${propertyId}`);
   redirect(`/app/viviendas/${propertyId}`);
 }
+
+// ===================================================

@@ -6,6 +6,10 @@ import { revalidatePath } from "next/cache";
 import { type FormState, getFieldErrors } from "@/features/shared/form-state";
 import { createClient } from "@/lib/supabase/server";
 
+// ============== Gestión de cuenta ==============
+
+// ==== Actualizar perfil ====
+
 export async function updateProfileAction(
   _state: FormState,
   formData: FormData,
@@ -31,6 +35,8 @@ export async function updateProfileAction(
   revalidatePath("/app/cuenta");
   return { message: "Perfil actualizado." };
 }
+
+// ==== Actualizar familia ====
 
 export async function updateFamilyAction(
   _state: FormState,
@@ -61,3 +67,5 @@ export async function updateFamilyAction(
   revalidatePath("/app");
   return { message: "Configuración familiar actualizada." };
 }
+
+// ===================================================

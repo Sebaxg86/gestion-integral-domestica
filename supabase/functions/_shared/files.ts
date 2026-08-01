@@ -2,6 +2,10 @@ export const MAX_FILE_SIZE = 10 * 1024 * 1024;
 export const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+// ============== Procesamiento seguro de archivos ==============
+
+// ==== Detectar tipo MIME ====
+
 export function detectMimeType(bytes: Uint8Array) {
   if (
     bytes.length >= 5 &&
@@ -38,6 +42,8 @@ export function detectMimeType(bytes: Uint8Array) {
   return null;
 }
 
+// ==== Normalizar nombre de archivo ====
+
 export function normalizeFilename(filename: string) {
   return filename
     .replace(/[\u0000-\u001f\u007f/\\]/g, "_")
@@ -45,8 +51,12 @@ export function normalizeFilename(filename: string) {
     .slice(0, 255);
 }
 
+// ==== Convertir contenido a hexadecimal ====
+
 export function toHex(buffer: ArrayBuffer) {
   return Array.from(new Uint8Array(buffer), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
 }
+
+// ===================================================

@@ -8,9 +8,15 @@ import { createClient } from "@/lib/supabase/browser";
 
 type PushState = "checking" | "unsupported" | "disabled" | "enabled";
 
+// ============== Configuración de notificaciones push ==============
+
+// ==== Obtener clave pública ====
+
 function getVapidPublicKey() {
   return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 }
+
+// ==== Convertir clave para PushManager ====
 
 function base64UrlToUint8Array(value: string) {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
@@ -19,6 +25,8 @@ function base64UrlToUint8Array(value: string) {
 
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
+
+// ==== Gestionar suscripción del dispositivo ====
 
 export function PushSettings({ userId }: { userId: string }) {
   const [state, setState] = useState<PushState>("checking");
@@ -180,3 +188,5 @@ export function PushSettings({ userId }: { userId: string }) {
     </div>
   );
 }
+
+// ===================================================

@@ -24,6 +24,10 @@ type FinalizeDocumentInput = {
   originalFilename: string;
 };
 
+// ============== Finalización de documentos ==============
+
+// ==== Construir respuesta HTTP ====
+
 function jsonResponse(body: unknown, status: number, origin: string | null) {
   return new Response(status === 204 ? null : JSON.stringify(body), {
     status,
@@ -39,6 +43,8 @@ function jsonResponse(body: unknown, status: number, origin: string | null) {
   });
 }
 
+// ==== Validar origen de la solicitud ====
+
 function allowedOrigin(origin: string | null) {
   const appUrl = Deno.env.get("APP_URL");
   const allowedOrigins = new Set([
@@ -50,6 +56,8 @@ function allowedOrigin(origin: string | null) {
     ? origin
     : (appUrl ?? "http://localhost:3000");
 }
+
+// ==== Validar entrada documental ====
 
 function isValidInput(input: FinalizeDocumentInput) {
   return (
@@ -65,6 +73,8 @@ function isValidInput(input: FinalizeDocumentInput) {
     typeof input.originalFilename === "string"
   );
 }
+
+// ==== Validar y almacenar documento ====
 
 Deno.serve(async (request) => {
   const origin = request.headers.get("origin");
@@ -264,3 +274,5 @@ Deno.serve(async (request) => {
 
   return jsonResponse({ document }, 201, origin);
 });
+
+// ===================================================

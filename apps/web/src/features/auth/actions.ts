@@ -23,6 +23,10 @@ export type AuthFormState = {
   errors?: Record<string, string[]>;
 };
 
+// ============== Gestión de autenticación ==============
+
+// ==== Convertir errores de validación ====
+
 function fieldErrors(error: {
   flatten: () => { fieldErrors: Record<string, string[] | undefined> };
 }) {
@@ -31,6 +35,8 @@ function fieldErrors(error: {
   );
   return Object.fromEntries(entries);
 }
+
+// ==== Registrar cuenta ====
 
 export async function signUpAction(
   _state: AuthFormState,
@@ -69,6 +75,8 @@ export async function signUpAction(
   redirect("/verifica-tu-correo");
 }
 
+// ==== Iniciar sesión ====
+
 export async function signInAction(
   _state: AuthFormState,
   formData: FormData,
@@ -103,6 +111,8 @@ export async function signInAction(
   redirect("/app");
 }
 
+// ==== Solicitar recuperación de contraseña ====
+
 export async function requestPasswordResetAction(
   _state: AuthFormState,
   formData: FormData,
@@ -127,6 +137,8 @@ export async function requestPasswordResetAction(
   };
 }
 
+// ==== Actualizar contraseña ====
+
 export async function updatePasswordAction(
   _state: AuthFormState,
   formData: FormData,
@@ -144,6 +156,8 @@ export async function updatePasswordAction(
 
   redirect("/app");
 }
+
+// ==== Reenviar verificación ====
 
 export async function resendVerificationAction(
   _state: AuthFormState,
@@ -168,6 +182,8 @@ export async function resendVerificationAction(
   };
 }
 
+// ==== Cerrar sesión ====
+
 export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
@@ -176,3 +192,5 @@ export async function signOutAction() {
   cookieStore.delete(SESSION_POLICY_COOKIE);
   redirect("/login");
 }
+
+// ===================================================
