@@ -1,0 +1,51 @@
+{
+  "name": "@gid/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "latest",
+    "@radix-ui/react-avatar": "latest",
+    "@radix-ui/react-dialog": "latest",
+    "@radix-ui/react-dropdown-menu": "latest",
+    "@radix-ui/react-label": "latest",
+    "@radix-ui/react-select": "latest",
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest",
+    "@tanstack/react-query": "latest",
+    "class-variance-authority": "latest",
+    "clsx": "latest",
+    "lucide-react": "latest",
+    "next": "16.2.12",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-hook-form": "latest",
+    "tailwind-merge": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@playwright/test": "latest",
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "latest",
+    "@testing-library/react": "latest",
+    "@testing-library/user-event": "latest",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.12",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vite-tsconfig-paths": "latest",
+    "vitest": "latest"
+  }
+}

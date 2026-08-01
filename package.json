@@ -1,0 +1,24 @@
+{
+  "name": "gestion-integral-domestica",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @gid/web dev",
+    "build": "pnpm --filter @gid/web build",
+    "lint": "pnpm --filter @gid/web lint",
+    "typecheck": "pnpm --filter @gid/web typecheck",
+    "test": "pnpm --filter @gid/web test",
+    "test:e2e": "pnpm --filter @gid/web test:e2e",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": "8.5.25",
+      "sharp": "0.35.3"
+    }
+  }
+}

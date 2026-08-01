@@ -48,6 +48,8 @@ build/
 out/
 .cache/
 coverage/
+.vercel/
+supabase/.temp/
 .tmp/
 temp/
 

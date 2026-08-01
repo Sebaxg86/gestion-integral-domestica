@@ -9,9 +9,11 @@ documentos, servicios, mantenimientos y responsabilidades familiares.
 
 ## ⚙️ Tecnologías utilizadas
 
+- Next.js, React y TypeScript
 - Progressive Web App (PWA)
-- Diseño responsive y mobile-first
-- Git y GitHub
+- Tailwind CSS y diseño responsive mobile-first
+- PostgreSQL, Supabase Auth, Storage y Row Level Security
+- Vercel, GitHub Actions y pnpm workspaces
 
 ## 📚 Descripción
 
@@ -33,6 +35,7 @@ Su objetivo es centralizar información doméstica importante y facilitar su con
 - [Flujos UX del MVP 0](Docs/6.Flujos_UX_MVP_0.md)
 - [Guía de diseño UI del MVP 0](Docs/7.Guia_diseno_UI_MVP_0.md)
 - [Inventario del archivo de Figma](Docs/8.Inventario_Figma.md)
+- [Arquitectura y stack del MVP 0](Docs/9.Arquitectura_stack_MVP_0.md)
 
 ## 👨‍💻 Autor
 
