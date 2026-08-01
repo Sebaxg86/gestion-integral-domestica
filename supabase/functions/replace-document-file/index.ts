@@ -74,7 +74,7 @@ Deno.serve(async (request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data: userData, error: userError } =
-    await userClient.auth.getUser(accessToken);
+    await adminClient.auth.getUser(accessToken);
   if (userError || !userData.user)
     return jsonResponse({ code: "UNAUTHORIZED" }, 401, origin);
 

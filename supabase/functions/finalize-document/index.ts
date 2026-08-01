@@ -115,7 +115,7 @@ Deno.serve(async (request) => {
   });
 
   const { data: userData, error: userError } =
-    await userClient.auth.getUser(accessToken);
+    await adminClient.auth.getUser(accessToken);
   if (userError || !userData.user) {
     return jsonResponse(
       { code: "UNAUTHORIZED", message: "La sesión ya no es válida." },
