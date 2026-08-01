@@ -3,6 +3,7 @@ import { LogOut, ShieldCheck } from "lucide-react";
 
 import { signOutAction } from "@/features/auth/actions";
 import { FamilyForm, ProfileForm } from "@/features/account/account-forms";
+import { PushSettings } from "@/features/notifications/push-settings";
 import { getSessionContext } from "@/lib/auth/session";
 
 export default async function AccountPage() {
@@ -21,6 +22,12 @@ export default async function AccountPage() {
             <p className="mt-4 text-xs text-[var(--color-text-secondary)]">
               Correo: {context!.profile.email}
             </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5 sm:p-6">
+            <h2 className="mb-3 font-semibold">Notificaciones</h2>
+            <PushSettings userId={context!.userId} />
           </CardContent>
         </Card>
         <Card>

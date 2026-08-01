@@ -1,4 +1,4 @@
-const CACHE_NAME = "gid-shell-v3";
+const CACHE_NAME = "gid-shell-v4";
 const STATIC_ASSETS = [
   "/",
   "/manifest.webmanifest",
@@ -44,5 +44,48 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     caches.match(event.request).then((cached) => cached ?? fetch(event.request)),
+  );
+});
+
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data?.text() };
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title || "GID", {
+      body: payload.body || "Tienes un nuevo aviso.",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: payload.tag || "gid-notification",
+      data: { url: payload.url || "/app/avisos" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(
+    event.notification.data?.url || "/app/avisos",
+    self.location.origin,
+  ).href;
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        const existingClient = clients.find((client) =>
+          client.url.startsWith(self.location.origin),
+        );
+        if (existingClient) {
+          return existingClient
+            .focus()
+            .then(() => existingClient.navigate(targetUrl));
+        }
+        return self.clients.openWindow(targetUrl);
+      }),
   );
 });
