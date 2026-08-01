@@ -1,29 +1,41 @@
 import { Badge, Card, CardContent } from "@gid/ui";
-import { ArchiveRestore, FileText, House } from "lucide-react";
+import { ArchiveRestore, CarFront, FileText, House } from "lucide-react";
 import Link from "next/link";
 
 import { setDocumentArchivedAction } from "@/features/documents/actions";
 import { setPropertyArchivedAction } from "@/features/properties/actions";
+import { setVehicleArchivedAction } from "@/features/vehicles/actions";
 import { getSessionContext } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ArchivePage() {
+  // ===== Consulta de recursos archivados =====
+
   const context = await getSessionContext();
   const supabase = await createClient();
-  const [{ data: properties }, { data: documents }] = await Promise.all([
-    supabase
-      .from("properties")
-      .select("id, name, version")
-      .eq("family_id", context!.family!.id)
-      .eq("status", "archived")
-      .order("updated_at", { ascending: false }),
-    supabase
-      .from("documents")
-      .select("id, property_id, name, version")
-      .eq("family_id", context!.family!.id)
-      .eq("status", "archived")
-      .order("updated_at", { ascending: false }),
-  ]);
+  const [{ data: properties }, { data: documents }, { data: vehicles }] =
+    await Promise.all([
+      supabase
+        .from("properties")
+        .select("id, name, version")
+        .eq("family_id", context!.family!.id)
+        .eq("status", "archived")
+        .order("updated_at", { ascending: false }),
+      supabase
+        .from("documents")
+        .select("id, property_id, name, version")
+        .eq("family_id", context!.family!.id)
+        .eq("status", "archived")
+        .order("updated_at", { ascending: false }),
+      supabase
+        .from("vehicles")
+        .select("id, name, version")
+        .eq("family_id", context!.family!.id)
+        .eq("status", "archived")
+        .order("updated_at", { ascending: false }),
+    ]);
+
+  // ===== Renderizado principal =====
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -31,6 +43,9 @@ export default async function ArchivePage() {
       <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
         Elementos conservados fuera de las vistas principales.
       </p>
+
+      {/* ===== Viviendas archivadas ===== */}
+
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Viviendas</h2>
         <div className="mt-3 grid gap-3">
@@ -79,6 +94,52 @@ export default async function ArchivePage() {
           )}
         </div>
       </section>
+
+      {/* ===== Vehículos archivados ===== */}
+
+      <section className="mt-9">
+        <h2 className="text-lg font-semibold">Vehículos</h2>
+        <div className="mt-3 grid gap-3">
+          {vehicles?.length ? (
+            vehicles.map((vehicle) => (
+              <Card key={vehicle.id}>
+                <CardContent className="flex items-center gap-4 p-4">
+                  <CarFront
+                    aria-hidden
+                    className="text-[var(--color-brand-800)]"
+                    size={20}
+                  />
+                  <Link
+                    className="min-w-0 flex-1 truncate font-semibold"
+                    href={`/app/vehiculos/${vehicle.id}`}
+                  >
+                    {vehicle.name}
+                  </Link>
+                  <Badge>Archivado</Badge>
+                  <form action={setVehicleArchivedAction}>
+                    <input type="hidden" name="vehicleId" value={vehicle.id} />
+                    <input type="hidden" name="version" value={vehicle.version} />
+                    <input type="hidden" name="archive" value="false" />
+                    <button
+                      className="grid size-11 place-items-center text-[var(--color-brand-800)]"
+                      aria-label={`Restaurar ${vehicle.name}`}
+                    >
+                      <ArchiveRestore aria-hidden size={18} />
+                    </button>
+                  </form>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              No hay vehículos archivados.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* ===== Documentos archivados ===== */}
+
       <section className="mt-9">
         <h2 className="text-lg font-semibold">Documentos</h2>
         <div className="mt-3 grid gap-3">

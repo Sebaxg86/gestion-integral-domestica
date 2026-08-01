@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Home, House, UserRound } from "lucide-react";
+import { Bell, CarFront, Home, House, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,13 +9,25 @@ import { cn } from "@gid/ui";
 const items = [
   { href: "/app", label: "Inicio", icon: Home },
   { href: "/app/viviendas", label: "Viviendas", icon: House },
+  { href: "/app/vehiculos", label: "Vehículos", icon: CarFront },
   { href: "/app/avisos", label: "Avisos", icon: Bell },
 ];
 
+// ============================================================================
+// Navegación principal
+// ============================================================================
+
 export function AppNavigation() {
+  // ===== Ruta activa =====
+
   const pathname = usePathname();
+
+  // ===== Navegación adaptable =====
+
   return (
     <>
+      {/* ===== Navegación para escritorio ===== */}
+
       <nav
         aria-label="Navegación principal"
         className="hidden w-60 flex-col gap-1 lg:flex"
@@ -31,9 +43,12 @@ export function AppNavigation() {
           pathname={pathname}
         />
       </nav>
+
+      {/* ===== Navegación inferior para móvil ===== */}
+
       <nav
         aria-label="Navegación principal"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-[var(--color-border)] bg-white/95 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-[var(--color-border)] bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur lg:hidden"
       >
         {items.map((item) => (
           <NavLink key={item.href} pathname={pathname} {...item} />
@@ -56,8 +71,13 @@ function NavLink({
   pathname: string;
   desktop?: boolean;
 }) {
+  // ===== Identificación del destino activo =====
+
   const active =
     href === "/app" ? pathname === href : pathname.startsWith(href);
+
+  // ===== Renderizado del enlace =====
+
   return (
     <Link
       aria-current={active ? "page" : undefined}

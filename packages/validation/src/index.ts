@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+// ============================================================================
+// Validaciones compartidas
+// ============================================================================
+
+// ===== Cuenta y autenticación =====
+
 export const emailSchema = z.string().trim().email("Ingresa un correo válido.");
 
 export const passwordSchema = z
@@ -16,18 +22,6 @@ export const fullNameSchema = z
   .min(2, "Escribe al menos 2 caracteres.")
   .max(100, "El nombre no puede exceder 100 caracteres.");
 
-export const propertyNameSchema = z
-  .string()
-  .trim()
-  .min(2, "Escribe al menos 2 caracteres.")
-  .max(100, "El nombre no puede exceder 100 caracteres.");
-
-export const documentNameSchema = z
-  .string()
-  .trim()
-  .min(2, "Escribe al menos 2 caracteres.")
-  .max(150, "El nombre no puede exceder 150 caracteres.");
-
 export const signUpSchema = z.object({
   fullName: fullNameSchema,
   email: emailSchema,
@@ -38,6 +32,14 @@ export const signInSchema = z.object({
   email: emailSchema,
   password: z.string().min(1, "Escribe tu contraseña."),
 });
+
+// ===== Familia y viviendas =====
+
+export const propertyNameSchema = z
+  .string()
+  .trim()
+  .min(2, "Escribe al menos 2 caracteres.")
+  .max(100, "El nombre no puede exceder 100 caracteres.");
 
 export const familySchema = z.object({
   name: z.string().trim().min(2, "Escribe al menos 2 caracteres.").max(80),
@@ -52,6 +54,63 @@ export const propertySchema = z.object({
     .trim()
     .max(300, "La dirección no puede exceder 300 caracteres."),
 });
+
+// ===== Vehículos =====
+
+export const vehicleSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Escribe al menos 2 caracteres.")
+    .max(100, "El alias no puede exceder 100 caracteres."),
+  type: z.enum([
+    "car",
+    "truck",
+    "motorcycle",
+    "trailer",
+    "recreational",
+    "other",
+  ]),
+  make: z.string().trim().max(80).optional(),
+  model: z.string().trim().max(80).optional(),
+  modelYear: z.coerce
+    .number()
+    .int("Escribe un año válido.")
+    .min(1886, "El año no puede ser anterior a 1886.")
+    .max(
+      new Date().getFullYear() + 1,
+      "El año no puede ser posterior al siguiente año.",
+    )
+    .optional(),
+  trim: z.string().trim().max(100).optional(),
+  color: z.string().trim().max(50).optional(),
+  vin: z
+    .string()
+    .trim()
+    .refine(
+      (value) => !value || (value.length >= 11 && value.length <= 17),
+      "El VIN debe tener entre 11 y 17 caracteres.",
+    )
+    .optional(),
+  licensePlate: z.string().trim().max(20).optional(),
+  mileage: z.coerce
+    .number()
+    .int("El kilometraje debe ser un número entero.")
+    .min(0, "El kilometraje no puede ser negativo.")
+    .optional(),
+  fuelType: z
+    .enum(["gasoline", "diesel", "hybrid", "electric", "other"])
+    .optional(),
+  notes: z.string().trim().max(2000).optional(),
+});
+
+// ===== Documentos y recordatorios =====
+
+export const documentNameSchema = z
+  .string()
+  .trim()
+  .min(2, "Escribe al menos 2 caracteres.")
+  .max(150, "El nombre no puede exceder 150 caracteres.");
 
 export const documentCategorySchema = z.enum([
   "deed",
