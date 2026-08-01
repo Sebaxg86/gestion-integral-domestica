@@ -39,6 +39,11 @@ export function ReplaceFileForm({
         setMessage("Tu sesión expiró. Inicia sesión de nuevo.");
         return;
       }
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        setMessage("Tu sesión expiró. Inicia sesión de nuevo.");
+        return;
+      }
 
       const uploadId = crypto.randomUUID();
       const fileId = crypto.randomUUID();
@@ -57,6 +62,9 @@ export function ReplaceFileForm({
 
       setUploadStatus("Validando y sustituyendo el archivo…");
       const { error } = await supabase.functions.invoke("replace-document-file", {
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        },
         body: {
           uploadId,
           documentId,

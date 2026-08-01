@@ -107,6 +107,11 @@ export function DocumentForm({
         setMessage("Tu sesión expiró. Inicia sesión de nuevo.");
         return;
       }
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        setMessage("Tu sesión expiró. Inicia sesión de nuevo.");
+        return;
+      }
 
       const uploadId = crypto.randomUUID();
       const documentId = crypto.randomUUID();
@@ -130,6 +135,9 @@ export function DocumentForm({
       const { error: finalizeError } = await supabase.functions.invoke(
         "finalize-document",
         {
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
           body: {
             uploadId,
             documentId,
