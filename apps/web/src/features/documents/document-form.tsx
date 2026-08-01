@@ -93,6 +93,9 @@ export function DocumentForm({
         leadDays: formData.get("leadDays")
           ? formData.get("leadDays")
           : undefined,
+        repeatIntervalDays: formData.get("repeatIntervalDays")
+          ? formData.get("repeatIntervalDays")
+          : undefined,
       });
 
       if (!result.success) {
@@ -171,6 +174,8 @@ export function DocumentForm({
           reminder_id: crypto.randomUUID(),
           target_document_id: documentId,
           reminder_lead_days: result.data.leadDays,
+          reminder_repeat_interval_days:
+            result.data.repeatIntervalDays ?? null,
         });
         if (reminderError) {
           setMessage(
@@ -382,6 +387,20 @@ export function DocumentForm({
           <FieldMessage>
             Se creará solamente si agregas vencimiento.
           </FieldMessage>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="repeatIntervalDays">Después del primer aviso</FieldLabel>
+          <select
+            className="min-h-12 rounded-[var(--radius-md)] border bg-white px-3.5"
+            id="repeatIntervalDays"
+            name="repeatIntervalDays"
+            defaultValue=""
+          >
+            <option value="">No repetir</option>
+            <option value="1">Recordarme cada día</option>
+            <option value="7">Recordarme cada semana</option>
+          </select>
+          <FieldMessage>Se detendrá cuando lo marques como atendido.</FieldMessage>
         </Field>
         <div className="grid grid-cols-[auto_1fr] gap-3">
           <Button

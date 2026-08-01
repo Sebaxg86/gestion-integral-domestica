@@ -59,7 +59,7 @@ export default async function DocumentDetailPage({
         .maybeSingle(),
       supabase
         .from("reminders")
-        .select("id, lead_days, scheduled_for, status, version")
+        .select("id, lead_days, repeat_interval_days, scheduled_for, status, version")
         .eq("document_id", documentId)
         .in("status", ["scheduled", "notified"])
         .maybeSingle(),
@@ -189,16 +189,30 @@ export default async function DocumentDetailPage({
                       <option value="1">1 día antes</option>
                       <option value="0">El mismo día</option>
                     </select>
+                    <select
+                      className="min-h-11 rounded-lg border bg-white px-3 text-sm"
+                      name="repeatIntervalDays"
+                      defaultValue={String(reminder.repeat_interval_days ?? "")}
+                    >
+                      <option value="">No repetir</option>
+                      <option value="1">Repetir cada día</option>
+                      <option value="7">Repetir cada semana</option>
+                    </select>
                     <button
                       className="min-h-11 text-left text-sm font-semibold text-[var(--color-brand-800)]"
                       type="submit"
                     >
-                      Actualizar anticipación
+                      Actualizar recordatorio
                     </button>
                   </form>
                 ) : (
                   <p className="text-sm text-[var(--color-text-secondary)]">
                     Necesita atención
+                    {reminder.repeat_interval_days === 1
+                      ? ". Te avisaremos cada día hasta que lo atiendas."
+                      : reminder.repeat_interval_days === 7
+                        ? ". Te avisaremos cada semana hasta que lo atiendas."
+                        : "."}
                   </p>
                 )}
                 <div className="mt-2 flex flex-wrap gap-3">
@@ -266,6 +280,15 @@ export default async function DocumentDetailPage({
                   <option value="3">3 días antes</option>
                   <option value="1">1 día antes</option>
                   <option value="0">El mismo día</option>
+                </select>
+                <select
+                  className="min-h-11 rounded-lg border bg-white px-3 text-sm"
+                  name="repeatIntervalDays"
+                  defaultValue=""
+                >
+                  <option value="">No repetir</option>
+                  <option value="1">Repetir cada día hasta atenderlo</option>
+                  <option value="7">Repetir cada semana hasta atenderlo</option>
                 </select>
                 <button
                   className="min-h-11 text-left text-sm font-semibold text-[var(--color-brand-800)]"

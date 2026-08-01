@@ -79,6 +79,10 @@ export const documentSchema = z
       .number()
       .refine((value) => [0, 1, 3, 7, 15, 30].includes(value))
       .optional(),
+    repeatIntervalDays: z.coerce
+      .number()
+      .refine((value) => [1, 7].includes(value))
+      .optional(),
   })
   .refine(
     ({ issueDate, expirationDate }) =>

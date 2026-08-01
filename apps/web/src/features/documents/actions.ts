@@ -46,13 +46,21 @@ export async function attendReminderAction(formData: FormData) {
 export async function createReminderAction(formData: FormData) {
   const documentId = String(formData.get("documentId"));
   const leadDays = Number(formData.get("leadDays"));
-  if (!documentId || ![0, 1, 3, 7, 15, 30].includes(leadDays)) return;
+  const repeatValue = String(formData.get("repeatIntervalDays") ?? "");
+  const repeatIntervalDays = repeatValue ? Number(repeatValue) : null;
+  if (
+    !documentId ||
+    ![0, 1, 3, 7, 15, 30].includes(leadDays) ||
+    (repeatIntervalDays !== null && ![1, 7].includes(repeatIntervalDays))
+  )
+    return;
 
   const supabase = await createClient();
   await supabase.rpc("create_reminder", {
     reminder_id: crypto.randomUUID(),
     target_document_id: documentId,
     reminder_lead_days: leadDays,
+    reminder_repeat_interval_days: repeatIntervalDays,
   });
   revalidatePath(`/app/documentos/${documentId}`);
 }
@@ -115,10 +123,13 @@ export async function updateReminderAction(formData: FormData) {
   const documentId = String(formData.get("documentId"));
   const version = Number(formData.get("version"));
   const leadDays = Number(formData.get("leadDays"));
+  const repeatValue = String(formData.get("repeatIntervalDays") ?? "");
+  const repeatIntervalDays = repeatValue ? Number(repeatValue) : null;
   if (
     !reminderId ||
     !Number.isSafeInteger(version) ||
-    ![0, 1, 3, 7, 15, 30].includes(leadDays)
+    ![0, 1, 3, 7, 15, 30].includes(leadDays) ||
+    (repeatIntervalDays !== null && ![1, 7].includes(repeatIntervalDays))
   )
     return;
   const supabase = await createClient();
@@ -126,6 +137,7 @@ export async function updateReminderAction(formData: FormData) {
     target_reminder_id: reminderId,
     reminder_lead_days: leadDays,
     expected_version: version,
+    reminder_repeat_interval_days: repeatIntervalDays,
   });
   revalidatePath(`/app/documentos/${documentId}`);
 }

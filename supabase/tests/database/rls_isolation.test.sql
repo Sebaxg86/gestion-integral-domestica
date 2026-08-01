@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(11);
+select plan(13);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -85,7 +85,8 @@ select lives_ok(
   $$select public.create_reminder(
     '11111100-0000-4000-8000-000000000001',
     '11111000-0000-4000-8000-000000000001',
-    0::smallint
+    0::smallint,
+    1::smallint
   )$$,
   'un recordatorio vencido se procesa al crearse'
 );
@@ -98,6 +99,15 @@ select is(
   (select count(*) from public.notifications where reminder_id = '11111100-0000-4000-8000-000000000001'),
   1::bigint,
   'la notificación inmediata es única'
+);
+select is(
+  (select repeat_interval_days from public.reminders where id = '11111100-0000-4000-8000-000000000001'),
+  1::smallint,
+  'el recordatorio conserva la frecuencia diaria'
+);
+select ok(
+  (select scheduled_for > statement_timestamp() from public.reminders where id = '11111100-0000-4000-8000-000000000001'),
+  'la siguiente repetición queda programada en el futuro'
 );
 
 select * from finish();

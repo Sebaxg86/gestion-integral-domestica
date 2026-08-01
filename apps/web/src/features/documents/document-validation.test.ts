@@ -28,8 +28,20 @@ describe("validación documental", () => {
       category: "insurance_policy",
       expirationDate: "2027-07-31",
       leadDays: 30,
+      repeatIntervalDays: 1,
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rechaza frecuencias de repetición no soportadas", () => {
+    const result = documentSchema.safeParse({
+      name: "Póliza de vivienda",
+      category: "insurance_policy",
+      expirationDate: "2027-07-31",
+      leadDays: 7,
+      repeatIntervalDays: 2,
+    });
+    expect(result.success).toBe(false);
   });
 });
 
