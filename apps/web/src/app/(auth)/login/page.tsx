@@ -1,8 +1,18 @@
 import Link from "next/link";
 
-import { SignInForm } from "@/features/auth/auth-form";
+import {
+  OAuthButtons,
+  OAuthErrorNotice,
+  SignInForm,
+} from "@/features/auth/auth-form";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+
   return (
     <div className="grid gap-7">
       <div>
@@ -16,6 +26,8 @@ export default function LoginPage() {
           Tus documentos y vencimientos, en un solo lugar privado.
         </p>
       </div>
+      {error === "oauth_failed" ? <OAuthErrorNotice context="acceso" /> : null}
+      <OAuthButtons returnTo="/login" />
       <SignInForm />
       <p className="text-center text-sm text-[var(--color-text-secondary)]">
         ¿Aún no tienes cuenta?{" "}

@@ -15,6 +15,17 @@ export type AuthFormState = {
   errors?: Record<string, string[]>;
 };
 
+const oauthProviders = ["google", "apple"] as const;
+type OAuthProvider = (typeof oauthProviders)[number];
+
+function isOAuthProvider(value: FormDataEntryValue | null): value is OAuthProvider {
+  return oauthProviders.includes(value as OAuthProvider);
+}
+
+function isOAuthReturnPath(value: FormDataEntryValue | null) {
+  return value === "/login" || value === "/registro";
+}
+
 function fieldErrors(error: {
   flatten: () => { fieldErrors: Record<string, string[] | undefined> };
 }) {
@@ -82,6 +93,51 @@ export async function signInAction(
   }
 
   redirect("/app");
+}
+
+export async function signInWithOAuthAction(
+  _state: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const provider = formData.get("provider");
+  const requestedReturnPath = formData.get("returnTo");
+
+  if (!isOAuthProvider(provider)) {
+    return { message: "El proveedor de acceso no es válido." };
+  }
+
+  const returnPath = isOAuthReturnPath(requestedReturnPath)
+    ? requestedReturnPath
+    : "/login";
+  let authorizationUrl: string | undefined;
+
+  try {
+    const supabase = await createClient();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const callbackUrl = new URL("/auth/callback", appUrl);
+    callbackUrl.searchParams.set("next", "/app");
+    callbackUrl.searchParams.set("returnTo", returnPath);
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: callbackUrl.toString(),
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (error || !data.url) {
+      return {
+        message: `No pudimos conectar con ${provider === "google" ? "Google" : "Apple"}. Intenta nuevamente.`,
+      };
+    }
+
+    authorizationUrl = data.url;
+  } catch {
+    return { message: "Supabase todavía no está configurado en este entorno." };
+  }
+
+  redirect(authorizationUrl);
 }
 
 export async function requestPasswordResetAction(
