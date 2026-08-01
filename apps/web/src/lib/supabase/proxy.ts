@@ -62,6 +62,7 @@ export async function updateSession(request: NextRequest) {
   const isPrivateRoute =
     pathname === "/onboarding" || pathname.startsWith("/app");
   const isAuthRoute = pathname === "/login" || pathname === "/registro";
+  const isLandingRoute = pathname === "/";
 
   if (!isAuthenticated && isPrivateRoute) {
     const loginUrl = request.nextUrl.clone();
@@ -106,7 +107,7 @@ export async function updateSession(request: NextRequest) {
     );
   }
 
-  if (isAuthenticated && isAuthRoute) {
+  if (isAuthenticated && (isAuthRoute || isLandingRoute)) {
     const appUrl = request.nextUrl.clone();
     appUrl.pathname = "/app";
     appUrl.search = "";

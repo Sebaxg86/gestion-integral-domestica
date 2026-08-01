@@ -1,4 +1,4 @@
-const CACHE_NAME = "gid-shell-v4";
+const CACHE_NAME = "gid-shell-v5";
 const STATIC_ASSETS = [
   "/",
   "/manifest.webmanifest",

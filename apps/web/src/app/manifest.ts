@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "GID",
     description:
       "Organiza viviendas, documentos y vencimientos familiares en un solo lugar.",
-    start_url: "/",
+    start_url: "/app",
     display: "standalone",
     background_color: "#f8fafc",
     theme_color: "#f8fafc",
