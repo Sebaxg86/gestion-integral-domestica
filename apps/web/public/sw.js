@@ -1,4 +1,4 @@
-const CACHE_NAME = "gid-shell-v2";
+const CACHE_NAME = "gid-shell-v3";
 const STATIC_ASSETS = [
   "/",
   "/manifest.webmanifest",
@@ -27,7 +27,18 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   if (event.request.mode === "navigate") {
-    event.respondWith(fetch(event.request).catch(() => caches.match("/")));
+    event.respondWith(
+      fetch(event.request).catch(async () => {
+        const cachedHome = await caches.match("/");
+        return (
+          cachedHome ??
+          new Response("Sin conexión. Intenta de nuevo cuando recuperes internet.", {
+            status: 503,
+            headers: { "content-type": "text/plain; charset=utf-8" },
+          })
+        );
+      }),
+    );
     return;
   }
 

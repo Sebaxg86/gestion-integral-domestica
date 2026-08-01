@@ -48,12 +48,10 @@ export function DocumentForm({
   function continueToDates(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const result = documentSchema
-      .pick({ name: true, category: true })
-      .safeParse({
-        name: formData.get("name"),
-        category: formData.get("category"),
-      });
+    const result = documentSchema.safeParse({
+      name: formData.get("name"),
+      category: formData.get("category"),
+    });
     if (!result.success) {
       setErrors(result.error.flatten().fieldErrors as Record<string, string[]>);
       setMessage("Revisa los datos marcados para continuar.");

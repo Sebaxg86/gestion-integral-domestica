@@ -2,6 +2,15 @@ import { documentSchema, passwordSchema } from "@gid/validation";
 import { describe, expect, it } from "vitest";
 
 describe("validación documental", () => {
+  it("acepta los datos mínimos del primer paso", () => {
+    const result = documentSchema.safeParse({
+      name: "Póliza de vivienda",
+      category: "insurance_policy",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("rechaza un vencimiento anterior a la emisión", () => {
     const result = documentSchema.safeParse({
       name: "Póliza de vivienda",
