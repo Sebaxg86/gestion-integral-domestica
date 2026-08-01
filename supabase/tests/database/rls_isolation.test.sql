@@ -1,6 +1,6 @@
 begin;
 
-select plan(8);
+select plan(11);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -35,6 +35,18 @@ insert into public.properties (
     'Casa B', 'house', '20000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002'
   );
 
+insert into public.documents (
+  id, family_id, property_id, name, category, expiration_date,
+  created_by_user_id, updated_by_user_id
+) values (
+  '11111000-0000-4000-8000-000000000001',
+  '11000000-0000-4000-8000-000000000001',
+  '11100000-0000-4000-8000-000000000001',
+  'Documento vencido', 'contract', current_date - 1,
+  '10000000-0000-4000-8000-000000000001',
+  '10000000-0000-4000-8000-000000000001'
+);
+
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
 
@@ -65,6 +77,25 @@ select throws_ok(
 
 select is((select count(*) from public.properties), 2::bigint, 'la creación propia queda visible');
 select is((select count(*) from public.properties where family_id = '22000000-0000-4000-8000-000000000002'), 0::bigint, 'la familia ajena continúa oculta');
+
+select lives_ok(
+  $$select public.create_reminder(
+    '11111100-0000-4000-8000-000000000001',
+    '11111000-0000-4000-8000-000000000001',
+    0
+  )$$,
+  'un recordatorio vencido se procesa al crearse'
+);
+select is(
+  (select status from public.reminders where id = '11111100-0000-4000-8000-000000000001'),
+  'notified',
+  'el recordatorio vencido queda notificado'
+);
+select is(
+  (select count(*) from public.notifications where reminder_id = '11111100-0000-4000-8000-000000000001'),
+  1::bigint,
+  'la notificación inmediata es única'
+);
 
 select * from finish();
 rollback;

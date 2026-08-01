@@ -67,6 +67,70 @@ as $$
   select ((expiration_date - lead_days::integer) + time '09:00') at time zone timezone_name;
 $$;
 
+create or replace function public.notify_due_reminders_for_family(
+  target_family_id uuid,
+  batch_size integer default 100
+)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  due_reminder record;
+  processed_count integer := 0;
+begin
+  for due_reminder in
+    select
+      reminder.id,
+      family.owner_user_id,
+      document.name as document_name,
+      document.expiration_date
+    from public.reminders as reminder
+    join public.documents as document
+      on document.family_id = reminder.family_id and document.id = reminder.document_id
+    join public.properties as property
+      on property.family_id = document.family_id and property.id = document.property_id
+    join public.families as family on family.id = reminder.family_id
+    where reminder.family_id = target_family_id
+      and reminder.status = 'scheduled'
+      and reminder.scheduled_for <= statement_timestamp()
+      and document.status = 'active'
+      and property.status = 'active'
+    order by reminder.scheduled_for
+    for update of reminder skip locked
+    limit batch_size
+  loop
+    insert into public.notifications (
+      family_id, reminder_id, recipient_user_id, title, message
+    ) values (
+      target_family_id,
+      due_reminder.id,
+      due_reminder.owner_user_id,
+      left('Revisa: ' || due_reminder.document_name, 200),
+      left(
+        format(
+          'El documento “%s” tiene vencimiento el %s.',
+          due_reminder.document_name,
+          to_char(due_reminder.expiration_date, 'DD/MM/YYYY')
+        ),
+        500
+      )
+    ) on conflict (reminder_id, recipient_user_id) do nothing;
+
+    update public.reminders
+    set status = 'notified',
+        notified_at = statement_timestamp(),
+        updated_by_user_id = due_reminder.owner_user_id
+    where id = due_reminder.id and status = 'scheduled';
+
+    processed_count := processed_count + 1;
+  end loop;
+
+  return processed_count;
+end;
+$$;
+
 create or replace function public.update_profile(
   profile_full_name text,
   expected_version bigint
@@ -186,6 +250,8 @@ begin
   where reminder.family_id = target_family_id
     and reminder.document_id = document.id
     and reminder.status = 'scheduled';
+
+  perform public.notify_due_reminders_for_family(target_family_id, 500);
 
   return updated_family;
 end;
@@ -527,6 +593,8 @@ begin
       and status = 'scheduled';
   end if;
 
+  perform public.notify_due_reminders_for_family(updated_document.family_id, 1);
+
   return updated_document;
 end;
 $$;
@@ -640,6 +708,9 @@ begin
     current_user_id
   ) returning * into created_reminder;
 
+  perform public.notify_due_reminders_for_family(document_record.family_id, 1);
+  select * into created_reminder from public.reminders where id = reminder_id;
+
   return created_reminder;
 end;
 $$;
@@ -686,6 +757,9 @@ begin
   if updated_reminder.id is null then
     raise exception using errcode = 'P0002', message = 'El recordatorio no existe, no está programado o cambió en otra sesión.';
   end if;
+
+  perform public.notify_due_reminders_for_family(updated_reminder.family_id, 1);
+  select * into updated_reminder from public.reminders where id = target_reminder_id;
 
   return updated_reminder;
 end;
@@ -885,6 +959,7 @@ revoke all on function public.require_authenticated_user() from public, anon, au
 revoke all on function public.require_family_owner(uuid) from public, anon, authenticated;
 revoke all on function public.is_valid_timezone(text) from public, anon, authenticated;
 revoke all on function public.calculate_reminder_time(date, smallint, text) from public, anon, authenticated;
+revoke all on function public.notify_due_reminders_for_family(uuid, integer) from public, anon, authenticated;
 revoke all on function public.update_profile(text, bigint) from public, anon, authenticated;
 revoke all on function public.create_family(uuid, text, text) from public, anon, authenticated;
 revoke all on function public.update_family(uuid, text, text, bigint) from public, anon, authenticated;
