@@ -36,6 +36,7 @@ Su objetivo es centralizar información doméstica importante y facilitar su con
 - [Guía de diseño UI del MVP 0](Docs/7.Guia_diseno_UI_MVP_0.md)
 - [Inventario del archivo de Figma](Docs/8.Inventario_Figma.md)
 - [Arquitectura y stack del MVP 0](Docs/9.Arquitectura_stack_MVP_0.md)
+- [Despliegue en Supabase y Vercel](Docs/10.Despliegue_Supabase_Vercel.md)
 
 ## 👨‍💻 Autor
 
