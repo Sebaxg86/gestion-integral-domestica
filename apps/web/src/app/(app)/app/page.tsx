@@ -2,6 +2,7 @@ import { Badge, buttonVariants, Card, CardContent } from "@gid/ui";
 import {
   ArrowRight,
   Bell,
+  CalendarClock,
   CarFront,
   FileText,
   House,
@@ -35,6 +36,12 @@ type DashboardService = {
   next_due_date: string | null;
   next_due_mileage: number | null;
   vehicle: { name: string; mileage: number | null; status: string };
+};
+
+type DashboardScheduledService = {
+  id: string;
+  due_date: string;
+  scheduled_service: { id: string; name: string; status: string };
 };
 
 const statusCopy = {
@@ -81,6 +88,7 @@ export default async function DashboardPage() {
     { data: vehicleRows },
     { data: documentRows },
     { data: serviceRows },
+    { data: scheduledServiceRows },
     { count: unreadCount },
   ] = await Promise.all([
     supabase
@@ -112,6 +120,15 @@ export default async function DashboardPage() {
       .eq("vehicles.status", "active")
       .or("next_due_date.not.is.null,next_due_mileage.not.is.null"),
     supabase
+      .from("scheduled_service_occurrences")
+      .select(
+        "id, due_date, scheduled_service:scheduled_services!inner(id, name, status)",
+      )
+      .eq("family_id", family.id)
+      .eq("status", "pending")
+      .eq("scheduled_service.status", "active")
+      .order("due_date", { ascending: true }),
+    supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .eq("family_id", family.id)
@@ -142,10 +159,19 @@ export default async function DashboardPage() {
 
     return dueByDate || dueByMileage;
   });
+  const scheduledServices = (scheduledServiceRows ??
+    []) as unknown as DashboardScheduledService[];
+  const attentionScheduledServices = scheduledServices.filter(
+    (service) => classifyExpiration(service.due_date, localDate) !== "later",
+  );
 
   // ===== Estado inicial sin recursos =====
 
-  if (!propertyRows?.length && !vehicleRows?.length) {
+  if (
+    !propertyRows?.length &&
+    !vehicleRows?.length &&
+    !scheduledServices.length
+  ) {
     return (
       <section className="mx-auto max-w-3xl py-8 sm:py-16">
         <div className="max-w-xl">
@@ -292,6 +318,52 @@ export default async function DashboardPage() {
                 </Card>
               </Link>
             ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ===== Servicios programados próximos ===== */}
+
+      {attentionScheduledServices.length ? (
+        <section className="mt-9">
+          <h2 className="text-lg font-semibold">Servicios programados</h2>
+          <div className="mt-3 grid gap-3">
+            {attentionScheduledServices.map((occurrence) => {
+              const dateStatus = classifyExpiration(
+                occurrence.due_date,
+                localDate,
+              );
+
+              return (
+                <Link
+                  href={`/app/servicios/${occurrence.scheduled_service.id}`}
+                  key={occurrence.id}
+                >
+                  <Card>
+                    <CardContent className="flex items-center gap-4 p-4 sm:p-5">
+                      <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-brand-800)]">
+                        <CalendarClock aria-hidden size={20} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold">
+                          {occurrence.scheduled_service.name}
+                        </p>
+                        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                          {formatDate(occurrence.due_date)}
+                        </p>
+                      </div>
+                      <Badge
+                        status={dateStatus === "later" ? "neutral" : dateStatus}
+                      >
+                        {dateStatus === "later"
+                          ? "Programado"
+                          : statusCopy[dateStatus]}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         </section>
       ) : null}

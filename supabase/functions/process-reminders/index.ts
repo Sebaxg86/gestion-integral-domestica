@@ -12,6 +12,9 @@ type PushDelivery = {
       document_id: string | null;
       vehicle_id: string | null;
       vehicle_service: { id: string; vehicle_id: string } | null;
+      scheduled_service_occurrence: {
+        scheduled_service: { id: string };
+      } | null;
     } | null;
   } | null;
   subscription: {
@@ -52,6 +55,12 @@ function getNotificationUrl(
 
   if (notification.reminder?.vehicle_id) {
     return `/app/vehiculos/${notification.reminder.vehicle_id}`;
+  }
+
+  const scheduledService =
+    notification.reminder?.scheduled_service_occurrence?.scheduled_service;
+  if (scheduledService) {
+    return `/app/servicios/${scheduledService.id}`;
   }
 
   return "/app/avisos";
@@ -102,7 +111,7 @@ Deno.serve(async (request) => {
   const { data: deliveryRows, error: deliveryError } = await adminClient
     .from("push_deliveries")
     .select(
-      "id, attempt_count, notification:notifications(id, title, message, reminder:reminders(document_id, vehicle_id, vehicle_service:vehicle_services(id, vehicle_id))), subscription:push_subscriptions(id, endpoint, p256dh, auth)",
+      "id, attempt_count, notification:notifications(id, title, message, reminder:reminders(document_id, vehicle_id, vehicle_service:vehicle_services(id, vehicle_id), scheduled_service_occurrence:scheduled_service_occurrences(scheduled_service:scheduled_services(id)))), subscription:push_subscriptions(id, endpoint, p256dh, auth)",
     )
     .eq("status", "queued")
     .lt("attempt_count", 5)

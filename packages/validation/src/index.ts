@@ -207,6 +207,67 @@ export const vehicleMileageReminderSchema = z.object({
   intervalDays: z.enum(["off", "30", "60", "90"]),
 });
 
+// ===== Servicios programados =====
+
+export const scheduledServiceSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, "Escribe al menos 2 caracteres.")
+      .max(150, "El nombre no puede exceder 150 caracteres."),
+    propertyId: z.string().uuid("Selecciona una vivienda válida.").optional(),
+    category: z.enum([
+      "electricity",
+      "water",
+      "gas",
+      "internet",
+      "phone",
+      "insurance",
+      "rent",
+      "property_tax",
+      "subscription",
+      "maintenance",
+      "other",
+    ]),
+    provider: z.string().trim().max(150).optional(),
+    recurrence: z.enum([
+      "once",
+      "weekly",
+      "monthly",
+      "bimonthly",
+      "quarterly",
+      "semiannual",
+      "annual",
+      "custom_days",
+    ]),
+    customIntervalDays: z.coerce
+      .number()
+      .int("El intervalo debe ser un número entero.")
+      .min(1, "El intervalo debe ser de al menos un día.")
+      .max(3650, "El intervalo no puede exceder 3650 días.")
+      .optional(),
+    dueDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Selecciona una fecha válida."),
+    leadDays: z.coerce
+      .number()
+      .refine(
+        (value) => [0, 1, 3, 7, 15, 30].includes(value),
+        "Selecciona una anticipación válida.",
+      ),
+    repeatIntervalDays: z.enum(["off", "1", "7"]),
+    notes: z.string().trim().max(2000).optional(),
+  })
+  .refine(
+    ({ recurrence, customIntervalDays }) =>
+      recurrence !== "custom_days" || customIntervalDays !== undefined,
+    {
+      path: ["customIntervalDays"],
+      message: "Indica cada cuántos días se repite.",
+    },
+  );
+
 // ===== Documentos y recordatorios =====
 
 export const documentNameSchema = z

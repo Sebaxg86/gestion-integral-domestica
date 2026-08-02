@@ -5,7 +5,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(23);
+select plan(25);
 
 -- ===== Preparación de usuarios y recursos aislados =====
 
@@ -159,6 +159,46 @@ insert into public.vehicle_service_attachments (
     '20000000-0000-4000-8000-000000000002'
   );
 
+-- ===== Preparación de servicios programados aislados =====
+
+insert into public.scheduled_services (
+  id, family_id, name, category, recurrence, lead_days,
+  created_by_user_id, updated_by_user_id
+) values
+  (
+    '11130000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    'Electricidad A', 'electricity', 'monthly', 7,
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '22230000-0000-4000-8000-000000000002',
+    '22000000-0000-4000-8000-000000000002',
+    'Electricidad B', 'electricity', 'monthly', 7,
+    '20000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000002'
+  );
+
+insert into public.scheduled_service_occurrences (
+  id, family_id, scheduled_service_id, sequence, due_date,
+  created_by_user_id, updated_by_user_id
+) values
+  (
+    '11131000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    '11130000-0000-4000-8000-000000000001', 1, current_date + 7,
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '22231000-0000-4000-8000-000000000002',
+    '22000000-0000-4000-8000-000000000002',
+    '22230000-0000-4000-8000-000000000002', 1, current_date + 7,
+    '20000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000002'
+  );
+
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
 
@@ -199,6 +239,19 @@ select is((select count(*) from public.vehicle_services), 1::bigint, 'solo el se
 select is((select count(*) from public.vehicle_service_items), 1::bigint, 'solo el trabajo propio es visible');
 select is((select count(*) from public.vehicle_service_parts), 1::bigint, 'solo la refacción propia es visible');
 select is((select count(*) from public.vehicle_service_attachments), 1::bigint, 'solo el adjunto propio es visible');
+
+-- ===== Verificación del aislamiento de servicios programados =====
+
+select is(
+  (select count(*) from public.scheduled_services),
+  1::bigint,
+  'solo el servicio programado propio es visible'
+);
+select is(
+  (select count(*) from public.scheduled_service_occurrences),
+  1::bigint,
+  'solo la ocurrencia programada propia es visible'
+);
 
 -- ===== Verificación del seguimiento de kilometraje =====
 

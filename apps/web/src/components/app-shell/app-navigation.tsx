@@ -1,6 +1,13 @@
 "use client";
 
-import { Bell, CarFront, Home, House, UserRound } from "lucide-react";
+import {
+  Bell,
+  CalendarClock,
+  CarFront,
+  Home,
+  House,
+  UserRound,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -10,6 +17,7 @@ const items = [
   { href: "/app", label: "Inicio", icon: Home },
   { href: "/app/viviendas", label: "Viviendas", icon: House },
   { href: "/app/vehiculos", label: "Vehículos", icon: CarFront },
+  { href: "/app/servicios", label: "Servicios", icon: CalendarClock },
   { href: "/app/avisos", label: "Avisos", icon: Bell },
 ];
 
@@ -48,7 +56,7 @@ export function AppNavigation() {
 
       <nav
         aria-label="Navegación principal"
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-[var(--color-border)] bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[var(--color-border)] bg-white/95 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur lg:hidden"
       >
         {items.map((item) => (
           <NavLink key={item.href} pathname={pathname} {...item} />
