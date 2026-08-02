@@ -268,6 +268,60 @@ export const scheduledServiceSchema = z
     },
   );
 
+// ===== Pendientes =====
+
+export const taskSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(2, "Escribe al menos 2 caracteres.")
+      .max(150, "El título no puede exceder 150 caracteres."),
+    description: z.string().trim().max(3000).optional(),
+    category: z.enum([
+      "household",
+      "maintenance",
+      "paperwork",
+      "purchase",
+      "call",
+      "appointment",
+      "other",
+    ]),
+    priority: z.enum(["low", "normal", "high"]),
+    targetType: z.enum(["family", "property", "vehicle", "service"]),
+    targetId: z.string().uuid("Selecciona un elemento válido.").optional(),
+    dueDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Selecciona una fecha válida.")
+      .optional(),
+    reminderLeadDays: z.enum(["off", "0", "1", "3", "7", "15", "30"]),
+    reminderRepeatIntervalDays: z.enum(["off", "1", "7"]),
+  })
+  .refine(
+    ({ targetType, targetId }) =>
+      targetType === "family" ? targetId === undefined : targetId !== undefined,
+    {
+      path: ["targetId"],
+      message: "Selecciona el elemento relacionado.",
+    },
+  )
+  .refine(
+    ({ dueDate, reminderLeadDays }) =>
+      dueDate !== undefined || reminderLeadDays === "off",
+    {
+      path: ["reminderLeadDays"],
+      message: "Agrega una fecha límite para configurar el aviso.",
+    },
+  )
+  .refine(
+    ({ reminderLeadDays, reminderRepeatIntervalDays }) =>
+      reminderLeadDays !== "off" || reminderRepeatIntervalDays === "off",
+    {
+      path: ["reminderRepeatIntervalDays"],
+      message: "Activa primero el aviso inicial.",
+    },
+  );
+
 // ===== Documentos y recordatorios =====
 
 export const documentNameSchema = z

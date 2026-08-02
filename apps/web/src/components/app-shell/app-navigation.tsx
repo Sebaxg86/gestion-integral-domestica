@@ -6,6 +6,8 @@ import {
   CarFront,
   Home,
   House,
+  ListTodo,
+  MoreHorizontal,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -13,12 +15,32 @@ import { usePathname } from "next/navigation";
 
 import { cn } from "@gid/ui";
 
-const items = [
+const desktopItems = [
   { href: "/app", label: "Inicio", icon: Home },
   { href: "/app/viviendas", label: "Viviendas", icon: House },
   { href: "/app/vehiculos", label: "Vehículos", icon: CarFront },
   { href: "/app/servicios", label: "Servicios", icon: CalendarClock },
+  { href: "/app/pendientes", label: "Pendientes", icon: ListTodo },
   { href: "/app/avisos", label: "Avisos", icon: Bell },
+];
+
+const mobileItems = [
+  { href: "/app", label: "Inicio", icon: Home },
+  { href: "/app/viviendas", label: "Viviendas", icon: House },
+  { href: "/app/vehiculos", label: "Vehículos", icon: CarFront },
+  { href: "/app/pendientes", label: "Pendientes", icon: ListTodo },
+  {
+    href: "/app/mas",
+    label: "Más",
+    icon: MoreHorizontal,
+    activePrefixes: [
+      "/app/mas",
+      "/app/servicios",
+      "/app/avisos",
+      "/app/archivo",
+      "/app/cuenta",
+    ],
+  },
 ];
 
 // ============================================================================
@@ -40,7 +62,7 @@ export function AppNavigation() {
         aria-label="Navegación principal"
         className="hidden w-60 flex-col gap-1 lg:flex"
       >
-        {items.map((item) => (
+        {desktopItems.map((item) => (
           <NavLink desktop key={item.href} pathname={pathname} {...item} />
         ))}
         <NavLink
@@ -58,7 +80,7 @@ export function AppNavigation() {
         aria-label="Navegación principal"
         className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[var(--color-border)] bg-white/95 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur lg:hidden"
       >
-        {items.map((item) => (
+        {mobileItems.map((item) => (
           <NavLink key={item.href} pathname={pathname} {...item} />
         ))}
       </nav>
@@ -72,17 +94,23 @@ function NavLink({
   icon: Icon,
   pathname,
   desktop,
+  activePrefixes,
 }: {
   href: string;
   label: string;
   icon: typeof Home;
   pathname: string;
   desktop?: boolean;
+  activePrefixes?: string[];
 }) {
   // ===== Identificación del destino activo =====
 
-  const active =
+  const matchesDirectPath =
     href === "/app" ? pathname === href : pathname.startsWith(href);
+  const matchesSecondaryPath = activePrefixes?.some((prefix) =>
+    pathname.startsWith(prefix),
+  );
+  const active = matchesDirectPath || Boolean(matchesSecondaryPath);
 
   // ===== Renderizado del enlace =====
 

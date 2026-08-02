@@ -19,6 +19,7 @@ type NotificationRow = {
     scheduled_service_occurrence: {
       scheduled_service: { id: string };
     } | null;
+    task: { id: string } | null;
   };
 };
 
@@ -46,6 +47,10 @@ function getNotificationPath(notification: NotificationRow) {
     return `/app/servicios/${scheduledService.id}`;
   }
 
+  if (notification.reminder.task) {
+    return `/app/pendientes/${notification.reminder.task.id}`;
+  }
+
   return "/app/avisos";
 }
 
@@ -55,7 +60,7 @@ export default async function NotificationsPage() {
   const { data } = await supabase
     .from("notifications")
     .select(
-      "id, title, message, status, created_at, reminder:reminders(document_id, vehicle_id, vehicle_service:vehicle_services(id, vehicle_id), scheduled_service_occurrence:scheduled_service_occurrences(scheduled_service:scheduled_services(id)))",
+      "id, title, message, status, created_at, reminder:reminders(document_id, vehicle_id, vehicle_service:vehicle_services(id, vehicle_id), scheduled_service_occurrence:scheduled_service_occurrences(scheduled_service:scheduled_services(id)), task:tasks(id))",
     )
     .eq("family_id", context!.family!.id)
     .order("created_at", { ascending: false })

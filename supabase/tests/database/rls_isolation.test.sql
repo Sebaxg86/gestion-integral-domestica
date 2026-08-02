@@ -5,7 +5,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(25);
+select plan(27);
 
 -- ===== Preparación de usuarios y recursos aislados =====
 
@@ -199,6 +199,29 @@ insert into public.scheduled_service_occurrences (
     '20000000-0000-4000-8000-000000000002'
   );
 
+-- ===== Preparación de pendientes aislados =====
+
+insert into public.tasks (
+  id, family_id, property_id, title, category, priority,
+  created_by_user_id, updated_by_user_id
+) values
+  (
+    '11140000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    '11100000-0000-4000-8000-000000000001',
+    'Pendiente A', 'household', 'normal',
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '22240000-0000-4000-8000-000000000002',
+    '22000000-0000-4000-8000-000000000002',
+    '22200000-0000-4000-8000-000000000002',
+    'Pendiente B', 'household', 'normal',
+    '20000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000002'
+  );
+
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
 
@@ -251,6 +274,19 @@ select is(
   (select count(*) from public.scheduled_service_occurrences),
   1::bigint,
   'solo la ocurrencia programada propia es visible'
+);
+
+-- ===== Verificación del aislamiento de pendientes =====
+
+select is(
+  (select count(*) from public.tasks),
+  1::bigint,
+  'solo el pendiente propio es visible'
+);
+select is(
+  (select title from public.tasks limit 1),
+  'Pendiente A',
+  'el pendiente ajeno no se filtra por error'
 );
 
 -- ===== Verificación del seguimiento de kilometraje =====

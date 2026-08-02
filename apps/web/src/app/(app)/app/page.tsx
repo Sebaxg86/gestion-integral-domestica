@@ -6,6 +6,7 @@ import {
   CarFront,
   FileText,
   House,
+  ListTodo,
   Plus,
   Wrench,
 } from "lucide-react";
@@ -44,6 +45,14 @@ type DashboardScheduledService = {
   scheduled_service: { id: string; name: string; status: string };
 };
 
+type DashboardTask = {
+  id: string;
+  title: string;
+  priority: string;
+  due_date: string | null;
+  status: string;
+};
+
 const statusCopy = {
   expired: "Vencido",
   today: "Vence hoy",
@@ -75,6 +84,27 @@ function getServiceAttentionSummary(service: DashboardService) {
   return "Revisar mantenimiento";
 }
 
+function getTaskAttentionBadge(
+  task: DashboardTask,
+  dateStatus: ReturnType<typeof classifyExpiration> | null,
+) {
+  // ===== Priorización de la señal más importante =====
+
+  if (dateStatus === "expired") {
+    return { status: "expired" as const, label: "Vencido" };
+  }
+
+  if (task.priority === "high") {
+    return { status: "today" as const, label: "Prioridad alta" };
+  }
+
+  if (dateStatus === "today") {
+    return { status: "today" as const, label: "Vence hoy" };
+  }
+
+  return { status: "upcoming" as const, label: "Próximo" };
+}
+
 export default async function DashboardPage() {
   // ===== Contexto y fecha familiar =====
 
@@ -89,6 +119,7 @@ export default async function DashboardPage() {
     { data: documentRows },
     { data: serviceRows },
     { data: scheduledServiceRows },
+    { data: taskRows },
     { count: unreadCount },
   ] = await Promise.all([
     supabase
@@ -129,6 +160,12 @@ export default async function DashboardPage() {
       .eq("scheduled_service.status", "active")
       .order("due_date", { ascending: true }),
     supabase
+      .from("tasks")
+      .select("id, title, priority, due_date, status")
+      .eq("family_id", family.id)
+      .in("status", ["pending", "in_progress"])
+      .order("due_date", { ascending: true, nullsFirst: false }),
+    supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .eq("family_id", family.id)
@@ -164,13 +201,21 @@ export default async function DashboardPage() {
   const attentionScheduledServices = scheduledServices.filter(
     (service) => classifyExpiration(service.due_date, localDate) !== "later",
   );
+  const tasks = (taskRows ?? []) as DashboardTask[];
+  const attentionTasks = tasks.filter(
+    (task) =>
+      task.priority === "high" ||
+      (task.due_date !== null &&
+        classifyExpiration(task.due_date, localDate) !== "later"),
+  );
 
   // ===== Estado inicial sin recursos =====
 
   if (
     !propertyRows?.length &&
     !vehicleRows?.length &&
-    !scheduledServices.length
+    !scheduledServices.length &&
+    !tasks.length
   ) {
     return (
       <section className="mx-auto max-w-3xl py-8 sm:py-16">
@@ -226,13 +271,22 @@ export default async function DashboardPage() {
             Lo que requiere atención
           </h1>
         </div>
-        <Link
-          className={buttonVariants({ variant: "secondary", size: "icon" })}
-          href="/app/avisos"
-          aria-label={`${unreadCount ?? 0} avisos sin leer`}
-        >
-          <Bell aria-hidden size={19} />
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            className={buttonVariants({ variant: "secondary", size: "icon" })}
+            href="/app/pendientes/nuevo"
+            aria-label="Agregar pendiente"
+          >
+            <Plus aria-hidden size={19} />
+          </Link>
+          <Link
+            className={buttonVariants({ variant: "secondary", size: "icon" })}
+            href="/app/avisos"
+            aria-label={`${unreadCount ?? 0} avisos sin leer`}
+          >
+            <Bell aria-hidden size={19} />
+          </Link>
+        </div>
       </div>
 
       <div className="mt-8 grid gap-3">
@@ -289,6 +343,51 @@ export default async function DashboardPage() {
           </Card>
         )}
       </div>
+
+      {/* ===== Pendientes prioritarios ===== */}
+
+      {attentionTasks.length ? (
+        <section className="mt-9">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-lg font-semibold">Pendientes</h2>
+            <Link
+              className="text-sm font-semibold text-[var(--color-brand-800)]"
+              href="/app/pendientes"
+            >
+              Ver todos
+            </Link>
+          </div>
+          <div className="mt-3 grid gap-3">
+            {attentionTasks.map((task) => {
+              const dateStatus = task.due_date
+                ? classifyExpiration(task.due_date, localDate)
+                : null;
+              const badge = getTaskAttentionBadge(task, dateStatus);
+
+              return (
+                <Link href={`/app/pendientes/${task.id}`} key={task.id}>
+                  <Card>
+                    <CardContent className="flex items-center gap-4 p-4 sm:p-5">
+                      <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-brand-800)]">
+                        <ListTodo aria-hidden size={20} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold">{task.title}</p>
+                        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                          {task.due_date
+                            ? formatDate(task.due_date)
+                            : "Sin fecha límite"}
+                        </p>
+                      </div>
+                      <Badge status={badge.status}>{badge.label}</Badge>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       {/* ===== Mantenimientos próximos ===== */}
 
