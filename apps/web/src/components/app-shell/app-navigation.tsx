@@ -118,17 +118,17 @@ function NavLink({
     <Link
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group flex min-h-12 items-center rounded-xl text-sm font-medium transition-[transform,background-color,color,box-shadow] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 active:scale-[0.97] active:duration-100 motion-reduce:transition-none motion-reduce:active:transform-none",
+        "group flex min-h-12 items-center rounded-xl text-sm font-medium transition-[transform,background-color,color,box-shadow,filter] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 active:scale-[0.91] active:duration-100 active:brightness-95 motion-reduce:transition-none motion-reduce:active:transform-none",
         desktop ? "gap-3 px-3" : "flex-col justify-center gap-1 text-xs",
         active
-          ? "bg-[var(--color-brand-100)] text-[var(--color-brand-900)] shadow-[var(--shadow-control)] hover:-translate-y-0.5 hover:bg-[var(--color-brand-100)] active:translate-y-px"
-          : "text-[var(--color-text-secondary)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-alt)] hover:shadow-[var(--shadow-control)] active:translate-y-px",
+          ? "bg-[var(--color-brand-100)] text-[var(--color-brand-900)] shadow-[var(--shadow-control)] hover:-translate-y-0.5 hover:bg-[var(--color-brand-100)] active:translate-y-px active:bg-[var(--color-brand-200)] active:shadow-[inset_0_1px_4px_rgba(0,0,0,0.14)]"
+          : "text-[var(--color-text-secondary)] hover:-translate-y-0.5 hover:bg-[var(--color-surface-alt)] hover:shadow-[var(--shadow-control)] active:translate-y-px active:bg-[var(--color-border)] active:shadow-[inset_0_1px_4px_rgba(0,0,0,0.14)]",
       )}
       href={href}
     >
       <Icon
         aria-hidden
-        className="transition-transform duration-200 ease-out group-hover:scale-105 group-active:scale-95 motion-reduce:transition-none"
+        className="transition-transform duration-200 ease-out group-hover:scale-105 group-active:scale-[0.78] motion-reduce:transition-none"
         size={desktop ? 19 : 20}
         strokeWidth={active ? 2.3 : 1.9}
       />
