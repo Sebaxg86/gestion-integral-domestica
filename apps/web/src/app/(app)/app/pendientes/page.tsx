@@ -65,28 +65,33 @@ function TaskCard({ task, localDate }: { task: TaskRow; localDate: string }) {
   // ===== Renderizado de la tarjeta =====
 
   return (
-    <Link href={`/app/pendientes/${task.id}`}>
-      <Card className="transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-overlay)]">
-        <CardContent className="flex items-center gap-4 p-4 sm:p-5">
+    <Link
+      className="block min-w-0 max-w-full"
+      href={`/app/pendientes/${task.id}`}
+    >
+      <Card className="min-w-0 max-w-full overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-overlay)]">
+        <CardContent className="flex min-w-0 items-start gap-4 p-4 sm:p-5">
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-brand-800)]">
             <ListTodo aria-hidden size={20} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold">{task.title}</p>
-            <p className="mt-1 truncate text-sm text-[var(--color-text-secondary)]">
+            <p className="whitespace-normal break-words font-semibold leading-5">
+              {task.title}
+            </p>
+            <p className="mt-1 whitespace-normal break-words text-sm leading-5 text-[var(--color-text-secondary)]">
               {taskCategoryLabels[task.category] ?? task.category}
               {` · ${taskPriorityLabels[task.priority] ?? task.priority}`}
               {task.due_date ? ` · ${formatDate(task.due_date)}` : ""}
             </p>
           </div>
-          <Badge status={badgeStatus}>
+          <Badge className="shrink-0" status={badgeStatus}>
             {dateStatus
               ? dateStatusLabels[dateStatus]
               : (taskStatusLabels[task.status] ?? task.status)}
           </Badge>
           <ArrowRight
             aria-hidden
-            className="hidden text-[var(--color-text-disabled)] sm:block"
+            className="hidden shrink-0 text-[var(--color-text-disabled)] sm:block"
             size={18}
           />
         </CardContent>
