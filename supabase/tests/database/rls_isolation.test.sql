@@ -5,7 +5,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(13);
+select plan(18);
 
 -- ===== Preparación de usuarios y recursos aislados =====
 
@@ -54,6 +54,111 @@ insert into public.documents (
   '10000000-0000-4000-8000-000000000001'
 );
 
+-- ===== Preparación del detalle vehicular aislado =====
+
+insert into public.vehicles (
+  id, family_id, name, type, created_by_user_id, updated_by_user_id
+) values
+  (
+    '11120000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001', 'Vehículo A', 'car',
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '22220000-0000-4000-8000-000000000002',
+    '22000000-0000-4000-8000-000000000002', 'Vehículo B', 'car',
+    '20000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000002'
+  );
+
+insert into public.vehicle_services (
+  id, family_id, vehicle_id, title, type, status,
+  created_by_user_id, updated_by_user_id
+) values
+  (
+    '11121000-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    '11120000-0000-4000-8000-000000000001',
+    'Servicio A', 'preventive', 'completed',
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '22221000-0000-4000-8000-000000000002',
+    '22000000-0000-4000-8000-000000000002',
+    '22220000-0000-4000-8000-000000000002',
+    'Servicio B', 'preventive', 'completed',
+    '20000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000002'
+  );
+
+insert into public.vehicle_service_items (
+  id, family_id, vehicle_service_id, category, description, status,
+  created_by_user_id, updated_by_user_id
+) values
+  (
+    '11121100-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    '11121000-0000-4000-8000-000000000001',
+    'brakes', 'Trabajo A', 'completed',
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '22221100-0000-4000-8000-000000000002',
+    '22000000-0000-4000-8000-000000000002',
+    '22221000-0000-4000-8000-000000000002',
+    'oil', 'Trabajo B', 'completed',
+    '20000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000002'
+  );
+
+insert into public.vehicle_service_parts (
+  id, family_id, vehicle_service_id, vehicle_service_item_id, name, quantity,
+  created_by_user_id, updated_by_user_id
+) values
+  (
+    '11121200-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    '11121000-0000-4000-8000-000000000001',
+    '11121100-0000-4000-8000-000000000001', 'Refacción A', 1,
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '22221200-0000-4000-8000-000000000002',
+    '22000000-0000-4000-8000-000000000002',
+    '22221000-0000-4000-8000-000000000002',
+    '22221100-0000-4000-8000-000000000002', 'Refacción B', 1,
+    '20000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000002'
+  );
+
+insert into public.vehicle_service_attachments (
+  id, family_id, vehicle_service_id, kind, title, original_filename,
+  storage_key, detected_mime_type, size_bytes, sha256,
+  created_by_user_id, updated_by_user_id
+) values
+  (
+    '11121300-0000-4000-8000-000000000001',
+    '11000000-0000-4000-8000-000000000001',
+    '11121000-0000-4000-8000-000000000001',
+    'receipt', 'Archivo A', 'archivo-a.pdf', 'families/a/archivo-a',
+    'application/pdf', 100, repeat('a', 64),
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001'
+  ),
+  (
+    '22221300-0000-4000-8000-000000000002',
+    '22000000-0000-4000-8000-000000000002',
+    '22221000-0000-4000-8000-000000000002',
+    'receipt', 'Archivo B', 'archivo-b.pdf', 'families/b/archivo-b',
+    'application/pdf', 100, repeat('b', 64),
+    '20000000-0000-4000-8000-000000000002',
+    '20000000-0000-4000-8000-000000000002'
+  );
+
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}';
 
@@ -86,6 +191,14 @@ select throws_ok(
 
 select is((select count(*) from public.properties), 2::bigint, 'la creación propia queda visible');
 select is((select count(*) from public.properties where family_id = '22000000-0000-4000-8000-000000000002'), 0::bigint, 'la familia ajena continúa oculta');
+
+-- ===== Verificación del aislamiento vehicular =====
+
+select is((select count(*) from public.vehicles), 1::bigint, 'solo el vehículo propio es visible');
+select is((select count(*) from public.vehicle_services), 1::bigint, 'solo el servicio propio es visible');
+select is((select count(*) from public.vehicle_service_items), 1::bigint, 'solo el trabajo propio es visible');
+select is((select count(*) from public.vehicle_service_parts), 1::bigint, 'solo la refacción propia es visible');
+select is((select count(*) from public.vehicle_service_attachments), 1::bigint, 'solo el adjunto propio es visible');
 
 -- ===== Verificación de recordatorios recurrentes =====
 

@@ -1,4 +1,9 @@
-import { vehicleSchema, vehicleServiceSchema } from "@gid/validation";
+import {
+  vehicleSchema,
+  vehicleServiceItemSchema,
+  vehicleServicePartSchema,
+  vehicleServiceSchema,
+} from "@gid/validation";
 import { describe, expect, it } from "vitest";
 
 describe("validación vehicular", () => {
@@ -67,5 +72,47 @@ describe("validación de mantenimiento vehicular", () => {
     // ===== Verificación =====
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe("validación del detalle de mantenimiento", () => {
+  it("acepta trabajos y refacciones con garantía opcional", () => {
+    // ===== Ejecución =====
+
+    const item = vehicleServiceItemSchema.safeParse({
+      category: "brakes",
+      description: "Cambio de balatas delanteras",
+      status: "completed",
+      warrantyUntil: "2027-02-01",
+    });
+    const part = vehicleServicePartSchema.safeParse({
+      name: "Juego de balatas",
+      brand: "Ejemplo",
+      quantity: 1,
+      unitCost: 1250,
+    });
+
+    // ===== Verificación =====
+
+    expect(item.success).toBe(true);
+    expect(part.success).toBe(true);
+  });
+
+  it("rechaza cantidades nulas o negativas", () => {
+    // ===== Ejecución =====
+
+    const zeroQuantity = vehicleServicePartSchema.safeParse({
+      name: "Filtro de aceite",
+      quantity: 0,
+    });
+    const negativeQuantity = vehicleServicePartSchema.safeParse({
+      name: "Filtro de aire",
+      quantity: -1,
+    });
+
+    // ===== Verificación =====
+
+    expect(zeroQuantity.success).toBe(false);
+    expect(negativeQuantity.success).toBe(false);
   });
 });

@@ -5,6 +5,11 @@ import { notFound } from "next/navigation";
 
 import { formatDate } from "@/features/documents/expiration";
 import { attendServiceReminderAction } from "@/features/vehicle-services/actions";
+import {
+  ServiceAttachmentsSection,
+  ServiceItemsSection,
+  ServicePartsSection,
+} from "@/features/vehicle-services/service-detail-sections";
 import { createClient } from "@/lib/supabase/server";
 
 const statusLabels: Record<string, string> = {
@@ -13,6 +18,7 @@ const statusLabels: Record<string, string> = {
   completed: "Completado",
   cancelled: "Cancelado",
 };
+
 const typeLabels: Record<string, string> = {
   preventive: "Mantenimiento preventivo",
   corrective: "Mantenimiento correctivo",
@@ -23,7 +29,13 @@ const typeLabels: Record<string, string> = {
   other: "Otro",
 };
 
+// ============================================================================
+// Detalle del servicio vehicular
+// ============================================================================
+
 function Data({ label, value }: { label: string; value: string }) {
+  // ===== Presentación de un dato operativo =====
+
   return (
     <div>
       <dt className="text-xs uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
@@ -39,15 +51,21 @@ export default async function VehicleServiceDetailPage({
 }: {
   params: Promise<{ vehicleId: string; serviceId: string }>;
 }) {
-  // ===== Consulta del servicio =====
+  // ===== Consulta del servicio y sus recursos relacionados =====
 
   const { vehicleId, serviceId } = await params;
   const supabase = await createClient();
-  const [{ data: service }, { data: reminder }] = await Promise.all([
+  const [
+    { data: service },
+    { data: reminder },
+    { data: items },
+    { data: parts },
+    { data: attachments },
+  ] = await Promise.all([
     supabase
       .from("vehicle_services")
       .select(
-        "id, vehicle_id, title, type, status, service_date, mileage, provider, cost, notes, next_due_date, next_due_mileage, version",
+        "id, family_id, vehicle_id, title, type, status, service_date, mileage, provider, cost, notes, next_due_date, next_due_mileage, version",
       )
       .eq("id", serviceId)
       .eq("vehicle_id", vehicleId)
@@ -58,10 +76,54 @@ export default async function VehicleServiceDetailPage({
       .eq("vehicle_service_id", serviceId)
       .in("status", ["scheduled", "notified"])
       .maybeSingle(),
+    supabase
+      .from("vehicle_service_items")
+      .select(
+        "id, category, description, status, notes, warranty_until, version",
+      )
+      .eq("vehicle_service_id", serviceId)
+      .is("archived_at", null)
+      .order("created_at"),
+    supabase
+      .from("vehicle_service_parts")
+      .select(
+        "id, vehicle_service_item_id, name, brand, part_number, quantity, unit_cost, warranty_until, notes, version",
+      )
+      .eq("vehicle_service_id", serviceId)
+      .is("archived_at", null)
+      .order("created_at"),
+    supabase
+      .from("vehicle_service_attachments")
+      .select(
+        "id, kind, title, original_filename, storage_key, size_bytes, version",
+      )
+      .eq("vehicle_service_id", serviceId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false }),
   ]);
-  if (!service) notFound();
 
-  // ===== Renderizado del detalle =====
+  // ------- Impedir mostrar recursos inexistentes o ajenos -------
+
+  if (!service) {
+    notFound();
+  }
+
+  // ===== Preparación de enlaces temporales =====
+
+  const attachmentsWithUrls = await Promise.all(
+    (attachments ?? []).map(async (attachment) => {
+      const { data } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(attachment.storage_key, 300);
+
+      return {
+        ...attachment,
+        signedUrl: data?.signedUrl ?? null,
+      };
+    }),
+  );
+
+  // ===== Renderizado del resumen del servicio =====
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -91,6 +153,9 @@ export default async function VehicleServiceDetailPage({
           <Pencil aria-hidden size={17} />
         </Link>
       </div>
+
+      {/* ===== Información principal ===== */}
+
       <Card className="mt-8">
         <CardContent className="p-5 sm:p-7">
           <dl className="grid gap-6 sm:grid-cols-2">
@@ -130,6 +195,9 @@ export default async function VehicleServiceDetailPage({
           ) : null}
         </CardContent>
       </Card>
+
+      {/* ===== Próxima atención ===== */}
+
       <Card className="mt-4 bg-[var(--color-surface-alt)] shadow-none">
         <CardContent className="grid gap-5 p-5 sm:grid-cols-2">
           <div className="flex gap-3">
@@ -156,6 +224,7 @@ export default async function VehicleServiceDetailPage({
           </div>
         </CardContent>
       </Card>
+
       {reminder?.status === "notified" ? (
         <form action={attendServiceReminderAction} className="mt-5">
           <input type="hidden" name="reminderId" value={reminder.id} />
@@ -170,6 +239,26 @@ export default async function VehicleServiceDetailPage({
           </button>
         </form>
       ) : null}
+
+      {/* ===== Detalle operativo ===== */}
+
+      <ServiceItemsSection
+        vehicleId={vehicleId}
+        serviceId={service.id}
+        items={items ?? []}
+      />
+      <ServicePartsSection
+        vehicleId={vehicleId}
+        serviceId={service.id}
+        items={items ?? []}
+        parts={parts ?? []}
+      />
+      <ServiceAttachmentsSection
+        familyId={service.family_id}
+        vehicleId={vehicleId}
+        serviceId={service.id}
+        attachments={attachmentsWithUrls}
+      />
     </div>
   );
 }

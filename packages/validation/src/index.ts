@@ -144,6 +144,52 @@ export const vehicleServiceSchema = z
     },
   );
 
+// ===== Detalle del mantenimiento =====
+
+export const vehicleServiceItemSchema = z.object({
+  category: z.enum([
+    "oil",
+    "brakes",
+    "suspension",
+    "battery",
+    "tires",
+    "fluids",
+    "filters",
+    "engine",
+    "transmission",
+    "electrical",
+    "body",
+    "inspection",
+    "other",
+  ]),
+  description: z
+    .string()
+    .trim()
+    .min(2, "Describe el trabajo con al menos 2 caracteres.")
+    .max(150, "La descripción no puede exceder 150 caracteres."),
+  status: z.enum(["reviewed", "completed", "pending"]),
+  notes: z.string().trim().max(1500).optional(),
+  warrantyUntil: z.string().optional(),
+});
+
+export const vehicleServicePartSchema = z.object({
+  serviceItemId: z.string().uuid().optional(),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Escribe el nombre de la refacción.")
+    .max(150, "El nombre no puede exceder 150 caracteres."),
+  brand: z.string().trim().max(100).optional(),
+  partNumber: z.string().trim().max(100).optional(),
+  quantity: z.coerce
+    .number()
+    .positive("La cantidad debe ser mayor que cero.")
+    .max(999999),
+  unitCost: z.coerce.number().min(0).max(9999999999).optional(),
+  warrantyUntil: z.string().optional(),
+  notes: z.string().trim().max(1000).optional(),
+});
+
 // ===== Documentos y recordatorios =====
 
 export const documentNameSchema = z
