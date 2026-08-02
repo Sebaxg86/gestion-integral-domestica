@@ -1,5 +1,13 @@
 import { Badge, buttonVariants, Card, CardContent } from "@gid/ui";
-import { ArrowRight, Bell, CarFront, FileText, House, Plus } from "lucide-react";
+import {
+  ArrowRight,
+  Bell,
+  CarFront,
+  FileText,
+  House,
+  Plus,
+  Wrench,
+} from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -17,6 +25,15 @@ type DashboardDocument = {
   expiration_date: string;
   property: { name: string; status: string } | null;
   vehicle: { name: string; status: string } | null;
+};
+
+type DashboardService = {
+  id: string;
+  vehicle_id: string;
+  title: string;
+  next_due_date: string | null;
+  next_due_mileage: number | null;
+  vehicle: { name: string; mileage: number | null; status: string };
 };
 
 const statusCopy = {
@@ -37,6 +54,7 @@ export default async function DashboardPage() {
     { data: propertyRows },
     { data: vehicleRows },
     { data: documentRows },
+    { data: serviceRows },
     { count: unreadCount },
   ] = await Promise.all([
     supabase
@@ -59,6 +77,15 @@ export default async function DashboardPage() {
       .not("expiration_date", "is", null)
       .order("expiration_date", { ascending: true }),
     supabase
+      .from("vehicle_services")
+      .select(
+        "id, vehicle_id, title, next_due_date, next_due_mileage, vehicle:vehicles!inner(name, mileage, status)",
+      )
+      .eq("family_id", family.id)
+      .neq("status", "cancelled")
+      .eq("vehicles.status", "active")
+      .or("next_due_date.not.is.null,next_due_mileage.not.is.null"),
+    supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .eq("family_id", family.id)
@@ -75,6 +102,18 @@ export default async function DashboardPage() {
       hasActiveParent &&
       classifyExpiration(document.expiration_date, localDate) !== "later"
     );
+  });
+  const services = (serviceRows ?? []) as unknown as DashboardService[];
+  const attentionServices = services.filter((service) => {
+    const dueByDate = service.next_due_date
+      ? classifyExpiration(service.next_due_date, localDate) !== "later"
+      : false;
+    const dueByMileage =
+      service.next_due_mileage !== null &&
+      service.vehicle.mileage !== null &&
+      service.vehicle.mileage >= service.next_due_mileage;
+
+    return dueByDate || dueByMileage;
   });
 
   // ===== Estado inicial sin recursos =====
@@ -100,7 +139,10 @@ export default async function DashboardPage() {
               <Plus aria-hidden size={18} /> Agregar vivienda
             </Link>
             <Link
-              className={buttonVariants({ variant: "secondary", size: "mobile" })}
+              className={buttonVariants({
+                variant: "secondary",
+                size: "mobile",
+              })}
               href="/app/vehiculos/nuevo"
             >
               <CarFront aria-hidden size={18} /> Agregar vehículo
@@ -169,8 +211,7 @@ export default async function DashboardPage() {
                         <Badge status={status}>{statusCopy[status]}</Badge>
                       </div>
                       <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                        {parentName} ·{" "}
-                        {formatDate(document.expiration_date)}
+                        {parentName} · {formatDate(document.expiration_date)}
                         {status === "upcoming" ? ` · ${difference} días` : ""}
                       </p>
                     </div>
@@ -195,6 +236,40 @@ export default async function DashboardPage() {
           </Card>
         )}
       </div>
+
+      {/* ===== Mantenimientos próximos ===== */}
+
+      {attentionServices.length ? (
+        <section className="mt-9">
+          <h2 className="text-lg font-semibold">Mantenimiento vehicular</h2>
+          <div className="mt-3 grid gap-3">
+            {attentionServices.map((service) => (
+              <Link
+                href={`/app/vehiculos/${service.vehicle_id}/mantenimientos/${service.id}`}
+                key={service.id}
+              >
+                <Card>
+                  <CardContent className="flex items-center gap-4 p-4 sm:p-5">
+                    <span className="grid size-11 place-items-center rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-brand-800)]">
+                      <Wrench aria-hidden size={20} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{service.title}</p>
+                      <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                        {service.vehicle.name}
+                        {service.next_due_date
+                          ? ` · ${formatDate(service.next_due_date)}`
+                          : " · Atención por kilometraje"}
+                      </p>
+                    </div>
+                    <Badge status="upcoming">Revisar</Badge>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

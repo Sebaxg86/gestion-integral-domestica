@@ -7,6 +7,7 @@ import {
   Gauge,
   Pencil,
   Plus,
+  Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -31,6 +32,13 @@ const fuelLabels: Record<string, string> = {
   other: "Otro",
 };
 
+const serviceStatusLabels: Record<string, string> = {
+  planned: "Programado",
+  in_progress: "En proceso",
+  completed: "Completado",
+  cancelled: "Cancelado",
+};
+
 function Data({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -40,6 +48,31 @@ function Data({ label, value }: { label: string; value: string }) {
       <dd className="mt-1.5 text-sm font-medium">{value}</dd>
     </div>
   );
+}
+
+function getServiceSummary(
+  service: {
+    service_date: string | null;
+    next_due_date: string | null;
+    next_due_mileage: number | null;
+  },
+  currentMileage: number | null,
+) {
+  // ===== Prioridad del próximo mantenimiento =====
+
+  if (
+    service.next_due_mileage !== null &&
+    currentMileage !== null &&
+    currentMileage >= service.next_due_mileage
+  ) {
+    return "Requiere atención por kilometraje";
+  }
+
+  if (service.next_due_date) {
+    return `Próximo: ${service.next_due_date}`;
+  }
+
+  return service.service_date || "Sin fecha";
 }
 
 // ============================================================================
@@ -55,21 +88,30 @@ export default async function VehicleDetailPage({
 
   const { vehicleId } = await params;
   const supabase = await createClient();
-  const [{ data: vehicle }, { data: documents }] = await Promise.all([
-    supabase
-      .from("vehicles")
-      .select(
-        "id, name, type, make, model, model_year, trim, color, vin, license_plate, mileage, fuel_type, notes, status, version",
-      )
-      .eq("id", vehicleId)
-      .single(),
-    supabase
-      .from("documents")
-      .select("id, name, category, expiration_date")
-      .eq("vehicle_id", vehicleId)
-      .eq("status", "active")
-      .order("name"),
-  ]);
+  const [{ data: vehicle }, { data: documents }, { data: services }] =
+    await Promise.all([
+      supabase
+        .from("vehicles")
+        .select(
+          "id, name, type, make, model, model_year, trim, color, vin, license_plate, mileage, fuel_type, notes, status, version",
+        )
+        .eq("id", vehicleId)
+        .single(),
+      supabase
+        .from("documents")
+        .select("id, name, category, expiration_date")
+        .eq("vehicle_id", vehicleId)
+        .eq("status", "active")
+        .order("name"),
+      supabase
+        .from("vehicle_services")
+        .select(
+          "id, title, type, status, service_date, next_due_date, next_due_mileage",
+        )
+        .eq("vehicle_id", vehicleId)
+        .order("service_date", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false }),
+    ]);
 
   if (!vehicle) notFound();
 
@@ -130,7 +172,11 @@ export default async function VehicleDetailPage({
 
       <Card className="mt-8 bg-[var(--color-surface-alt)] shadow-none">
         <CardContent className="flex items-center gap-4 p-5">
-          <Gauge aria-hidden className="text-[var(--color-brand-800)]" size={22} />
+          <Gauge
+            aria-hidden
+            className="text-[var(--color-brand-800)]"
+            size={22}
+          />
           <div>
             <p className="text-xs text-[var(--color-text-secondary)]">
               Kilometraje actual
@@ -145,10 +191,16 @@ export default async function VehicleDetailPage({
       <Card className="mt-4">
         <CardContent className="p-5 sm:p-7">
           <dl className="grid gap-6 sm:grid-cols-2">
-            <Data label="Tipo" value={typeLabels[vehicle.type] ?? vehicle.type} />
+            <Data
+              label="Tipo"
+              value={typeLabels[vehicle.type] ?? vehicle.type}
+            />
             <Data label="Versión" value={vehicle.trim || "No indicada"} />
             <Data label="Color" value={vehicle.color || "No indicado"} />
-            <Data label="Placas" value={vehicle.license_plate || "No indicadas"} />
+            <Data
+              label="Placas"
+              value={vehicle.license_plate || "No indicadas"}
+            />
             <Data label="VIN" value={vehicle.vin || "No indicado"} />
             <Data
               label="Combustible"
@@ -165,7 +217,9 @@ export default async function VehicleDetailPage({
               <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
                 Notas
               </p>
-              <p className="mt-2 whitespace-pre-wrap text-sm">{vehicle.notes}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm">
+                {vehicle.notes}
+              </p>
             </div>
           ) : null}
         </CardContent>
@@ -212,6 +266,58 @@ export default async function VehicleDetailPage({
                 <p className="font-semibold">Todavía no hay documentos</p>
                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
                   Agrega tarjeta de circulación, póliza o verificación.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </section>
+
+      {/* ===== Bitácora de mantenimiento ===== */}
+
+      <section className="mt-9">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Mantenimiento</h2>
+          {vehicle.status === "active" ? (
+            <Link
+              className={buttonVariants({ variant: "secondary" })}
+              href={`/app/vehiculos/${vehicle.id}/mantenimientos/nuevo`}
+            >
+              <Plus aria-hidden size={18} /> Registrar servicio
+            </Link>
+          ) : null}
+        </div>
+        <div className="mt-3 grid gap-3">
+          {services?.length ? (
+            services.map((service) => (
+              <Link
+                href={`/app/vehiculos/${vehicle.id}/mantenimientos/${service.id}`}
+                key={service.id}
+              >
+                <Card>
+                  <CardContent className="flex items-center gap-4 p-4">
+                    <span className="grid size-10 place-items-center rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-brand-800)]">
+                      <Wrench aria-hidden size={19} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{service.title}</p>
+                      <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+                        {getServiceSummary(service, vehicle.mileage)}
+                      </p>
+                    </div>
+                    <Badge>
+                      {serviceStatusLabels[service.status] ?? service.status}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))
+          ) : (
+            <Card className="bg-[var(--color-surface-alt)] shadow-none">
+              <CardContent className="p-8 text-center">
+                <p className="font-semibold">Sin servicios registrados</p>
+                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                  Registra el mantenimiento más reciente o el próximo.
                 </p>
               </CardContent>
             </Card>

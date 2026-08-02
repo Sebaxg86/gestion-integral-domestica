@@ -12,8 +12,24 @@ type NotificationRow = {
   message: string;
   status: "unread" | "read";
   created_at: string;
-  reminder: { document_id: string };
+  reminder: {
+    document_id: string | null;
+    vehicle_service: { id: string; vehicle_id: string } | null;
+  };
 };
+
+function getNotificationPath(notification: NotificationRow) {
+  // ===== Selección del recurso que originó el aviso =====
+
+  if (notification.reminder.document_id) {
+    return `/app/documentos/${notification.reminder.document_id}`;
+  }
+
+  const service = notification.reminder.vehicle_service;
+  return service
+    ? `/app/vehiculos/${service.vehicle_id}/mantenimientos/${service.id}`
+    : "/app/avisos";
+}
 
 export default async function NotificationsPage() {
   const context = await getSessionContext();
@@ -21,7 +37,7 @@ export default async function NotificationsPage() {
   const { data } = await supabase
     .from("notifications")
     .select(
-      "id, title, message, status, created_at, reminder:reminders(document_id)",
+      "id, title, message, status, created_at, reminder:reminders(document_id, vehicle_service:vehicle_services(id, vehicle_id))",
     )
     .eq("family_id", context!.family!.id)
     .order("created_at", { ascending: false })
@@ -53,7 +69,7 @@ export default async function NotificationsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       className="font-semibold hover:underline"
-                      href={`/app/documentos/${notification.reminder.document_id}`}
+                      href={getNotificationPath(notification)}
                     >
                       {notification.title}
                     </Link>

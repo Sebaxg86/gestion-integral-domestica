@@ -8,7 +8,10 @@ type PushDelivery = {
     id: string;
     title: string;
     message: string;
-    reminder: { document_id: string } | null;
+    reminder: {
+      document_id: string | null;
+      vehicle_service: { id: string; vehicle_id: string } | null;
+    } | null;
   } | null;
   subscription: {
     id: string;
@@ -30,6 +33,23 @@ function jsonResponse(body: unknown, status: number) {
       "cache-control": "no-store",
     },
   });
+}
+
+function getNotificationUrl(
+  notification: NonNullable<PushDelivery["notification"]>,
+) {
+  // ===== Selección del destino según el tipo de recordatorio =====
+
+  if (notification.reminder?.document_id) {
+    return `/app/documentos/${notification.reminder.document_id}`;
+  }
+
+  const service = notification.reminder?.vehicle_service;
+  if (service) {
+    return `/app/vehiculos/${service.vehicle_id}/mantenimientos/${service.id}`;
+  }
+
+  return "/app/avisos";
 }
 
 Deno.serve(async (request) => {
@@ -77,7 +97,7 @@ Deno.serve(async (request) => {
   const { data: deliveryRows, error: deliveryError } = await adminClient
     .from("push_deliveries")
     .select(
-      "id, attempt_count, notification:notifications(id, title, message, reminder:reminders(document_id)), subscription:push_subscriptions(id, endpoint, p256dh, auth)",
+      "id, attempt_count, notification:notifications(id, title, message, reminder:reminders(document_id, vehicle_service:vehicle_services(id, vehicle_id))), subscription:push_subscriptions(id, endpoint, p256dh, auth)",
     )
     .eq("status", "queued")
     .lt("attempt_count", 5)
@@ -116,9 +136,7 @@ Deno.serve(async (request) => {
         JSON.stringify({
           title: delivery.notification.title,
           body: delivery.notification.message,
-          url: delivery.notification.reminder
-            ? `/app/documentos/${delivery.notification.reminder.document_id}`
-            : "/app/avisos",
+          url: getNotificationUrl(delivery.notification),
           tag: delivery.notification.id,
         }),
         { TTL: 60 * 60 * 24, urgency: "high" },
@@ -141,7 +159,8 @@ Deno.serve(async (request) => {
       await adminClient
         .from("push_deliveries")
         .update({
-          status: isInvalidSubscription || exhaustedAttempts ? "failed" : "queued",
+          status:
+            isInvalidSubscription || exhaustedAttempts ? "failed" : "queued",
           failed_at:
             isInvalidSubscription || exhaustedAttempts
               ? new Date().toISOString()

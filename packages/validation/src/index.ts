@@ -104,6 +104,46 @@ export const vehicleSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
 });
 
+export const vehicleServiceSchema = z
+  .object({
+    title: z.string().trim().min(2).max(150),
+    type: z.enum([
+      "preventive",
+      "corrective",
+      "repair",
+      "diagnostic",
+      "inspection",
+      "general",
+      "other",
+    ]),
+    status: z.enum(["planned", "in_progress", "completed", "cancelled"]),
+    serviceDate: z.string().optional(),
+    mileage: z.coerce.number().int().min(0).optional(),
+    provider: z.string().trim().max(150).optional(),
+    cost: z.coerce.number().min(0).optional(),
+    notes: z.string().trim().max(3000).optional(),
+    nextDueDate: z.string().optional(),
+    nextDueMileage: z.coerce.number().int().min(0).optional(),
+    leadDays: z.coerce
+      .number()
+      .refine((value) => [0, 1, 3, 7, 15, 30].includes(value))
+      .optional(),
+    repeatIntervalDays: z.coerce
+      .number()
+      .refine((value) => [1, 7].includes(value))
+      .optional(),
+  })
+  .refine(
+    ({ mileage, nextDueMileage }) =>
+      mileage === undefined ||
+      nextDueMileage === undefined ||
+      nextDueMileage >= mileage,
+    {
+      path: ["nextDueMileage"],
+      message: "El próximo kilometraje no puede ser menor al actual.",
+    },
+  );
+
 // ===== Documentos y recordatorios =====
 
 export const documentNameSchema = z
