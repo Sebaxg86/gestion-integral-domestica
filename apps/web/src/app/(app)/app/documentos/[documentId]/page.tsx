@@ -30,6 +30,10 @@ const categoryLabels: Record<string, string> = {
   warranty: "Garantía",
   invoice: "Factura",
   permit: "Permiso",
+  registration_card: "Tarjeta de circulación",
+  inspection: "Verificación",
+  financing: "Financiamiento",
+  manual: "Manual",
   other: "Otro",
 };
 
@@ -45,7 +49,7 @@ export default async function DocumentDetailPage({
       supabase
         .from("documents")
         .select(
-          "id, property_id, name, category, issue_date, expiration_date, issuer, document_number, notes, status, version",
+          "id, property_id, vehicle_id, name, category, issue_date, expiration_date, issuer, document_number, notes, status, version",
         )
         .eq("id", documentId)
         .single(),
@@ -66,6 +70,13 @@ export default async function DocumentDetailPage({
     ]);
   if (!document) notFound();
 
+  const parentPath = document.vehicle_id
+    ? `/app/vehiculos/${document.vehicle_id}`
+    : `/app/viviendas/${document.property_id}`;
+  const parentLabel = document.vehicle_id
+    ? "Volver al vehículo"
+    : "Volver a la vivienda";
+
   const signedFile = file
     ? await supabase.storage
         .from("documents")
@@ -78,9 +89,9 @@ export default async function DocumentDetailPage({
     <div className="mx-auto max-w-4xl">
       <Link
         className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--color-text-secondary)]"
-        href={`/app/viviendas/${document.property_id}`}
+        href={parentPath}
       >
-        <ArrowLeft aria-hidden size={18} /> Volver a la vivienda
+        <ArrowLeft aria-hidden size={18} /> {parentLabel}
       </Link>
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -340,7 +351,16 @@ export default async function DocumentDetailPage({
       {document.status === "active" ? (
         <form action={setDocumentArchivedAction} className="mt-8 border-t pt-6">
           <input type="hidden" name="documentId" value={document.id} />
-          <input type="hidden" name="propertyId" value={document.property_id} />
+          <input
+            type="hidden"
+            name="propertyId"
+            value={document.property_id ?? ""}
+          />
+          <input
+            type="hidden"
+            name="vehicleId"
+            value={document.vehicle_id ?? ""}
+          />
           <input type="hidden" name="version" value={document.version} />
           <input type="hidden" name="archive" value="true" />
           <button

@@ -122,6 +122,10 @@ export const documentCategorySchema = z.enum([
   "warranty",
   "invoice",
   "permit",
+  "registration_card",
+  "inspection",
+  "financing",
+  "manual",
   "other",
 ]);
 

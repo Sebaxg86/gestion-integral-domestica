@@ -13,7 +13,8 @@ type FinalizeDocumentInput = {
   documentId: string;
   fileId: string;
   familyId: string;
-  propertyId: string;
+  propertyId?: string | null;
+  vehicleId?: string | null;
   name: string;
   category: string;
   issueDate?: string | null;
@@ -56,14 +57,16 @@ function allowedOrigin(origin: string | null) {
 }
 
 function isValidInput(input: FinalizeDocumentInput) {
+  const hasValidProperty =
+    typeof input.propertyId === "string" && UUID_PATTERN.test(input.propertyId);
+  const hasValidVehicle =
+    typeof input.vehicleId === "string" && UUID_PATTERN.test(input.vehicleId);
+
   return (
-    [
-      input.uploadId,
-      input.documentId,
-      input.fileId,
-      input.familyId,
-      input.propertyId,
-    ].every((value) => UUID_PATTERN.test(value)) &&
+    [input.uploadId, input.documentId, input.fileId, input.familyId].every(
+      (value) => UUID_PATTERN.test(value),
+    ) &&
+    hasValidProperty !== hasValidVehicle &&
     typeof input.name === "string" &&
     typeof input.category === "string" &&
     typeof input.originalFilename === "string"
@@ -238,28 +241,37 @@ Deno.serve(async (request) => {
     );
   }
 
-  const { data: document, error: finalizeError } = await adminClient.rpc(
-    "finalize_document_upload",
-    {
-      actor_user_id: userData.user.id,
-      document_id: input.documentId,
-      file_id: input.fileId,
-      target_family_id: input.familyId,
-      target_property_id: input.propertyId,
-      document_name: input.name,
-      document_category: input.category,
-      document_issue_date: input.issueDate ?? null,
-      document_expiration_date: input.expirationDate ?? null,
-      document_issuer: input.issuer ?? null,
-      document_number_value: input.documentNumber ?? null,
-      document_notes: input.notes ?? null,
-      file_storage_key: finalPath,
-      file_original_filename: originalFilename,
-      file_detected_mime_type: detectedMimeType,
-      file_size_bytes: stagedFile.size,
-      file_sha256: sha256,
-    },
-  );
+  // ===== Enrutamiento según el recurso propietario =====
+
+  const documentInput = {
+    actor_user_id: userData.user.id,
+    document_id: input.documentId,
+    file_id: input.fileId,
+    target_family_id: input.familyId,
+    document_name: input.name,
+    document_category: input.category,
+    document_issue_date: input.issueDate ?? null,
+    document_expiration_date: input.expirationDate ?? null,
+    document_issuer: input.issuer ?? null,
+    document_number_value: input.documentNumber ?? null,
+    document_notes: input.notes ?? null,
+    file_storage_key: finalPath,
+    file_original_filename: originalFilename,
+    file_detected_mime_type: detectedMimeType,
+    file_size_bytes: stagedFile.size,
+    file_sha256: sha256,
+  };
+
+  const finalizeResult = input.vehicleId
+    ? await adminClient.rpc("finalize_vehicle_document_upload", {
+        ...documentInput,
+        target_vehicle_id: input.vehicleId,
+      })
+    : await adminClient.rpc("finalize_document_upload", {
+        ...documentInput,
+        target_property_id: input.propertyId,
+      });
+  const { data: document, error: finalizeError } = finalizeResult;
 
   if (finalizeError || !document) {
     await storage.move(finalPath, stagedPath);

@@ -1,5 +1,13 @@
 import { Badge, buttonVariants, Card, CardContent } from "@gid/ui";
-import { Archive, ArrowLeft, CarFront, Gauge, Pencil } from "lucide-react";
+import {
+  Archive,
+  ArrowLeft,
+  CarFront,
+  FileText,
+  Gauge,
+  Pencil,
+  Plus,
+} from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -47,13 +55,21 @@ export default async function VehicleDetailPage({
 
   const { vehicleId } = await params;
   const supabase = await createClient();
-  const { data: vehicle } = await supabase
-    .from("vehicles")
-    .select(
-      "id, name, type, make, model, model_year, trim, color, vin, license_plate, mileage, fuel_type, notes, status, version",
-    )
-    .eq("id", vehicleId)
-    .single();
+  const [{ data: vehicle }, { data: documents }] = await Promise.all([
+    supabase
+      .from("vehicles")
+      .select(
+        "id, name, type, make, model, model_year, trim, color, vin, license_plate, mileage, fuel_type, notes, status, version",
+      )
+      .eq("id", vehicleId)
+      .single(),
+    supabase
+      .from("documents")
+      .select("id, name, category, expiration_date")
+      .eq("vehicle_id", vehicleId)
+      .eq("status", "active")
+      .order("name"),
+  ]);
 
   if (!vehicle) notFound();
 
@@ -154,6 +170,54 @@ export default async function VehicleDetailPage({
           ) : null}
         </CardContent>
       </Card>
+
+      {/* ===== Documentos vehiculares ===== */}
+
+      <section className="mt-9">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Documentos</h2>
+          {vehicle.status === "active" ? (
+            <Link
+              className={buttonVariants({ variant: "primary" })}
+              href={`/app/vehiculos/${vehicle.id}/documentos/nuevo`}
+            >
+              <Plus aria-hidden size={18} /> Agregar documento
+            </Link>
+          ) : null}
+        </div>
+        <div className="mt-3 grid gap-3">
+          {documents?.length ? (
+            documents.map((document) => (
+              <Link href={`/app/documentos/${document.id}`} key={document.id}>
+                <Card>
+                  <CardContent className="flex items-center gap-4 p-4">
+                    <span className="grid size-10 place-items-center rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-brand-800)]">
+                      <FileText aria-hidden size={19} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{document.name}</p>
+                      <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+                        {document.expiration_date
+                          ? `Vence ${document.expiration_date}`
+                          : "Sin vencimiento"}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))
+          ) : (
+            <Card className="bg-[var(--color-surface-alt)] shadow-none">
+              <CardContent className="p-8 text-center">
+                <p className="font-semibold">Todavía no hay documentos</p>
+                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                  Agrega tarjeta de circulación, póliza o verificación.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </section>
 
       {/* ===== Archivado ===== */}
 

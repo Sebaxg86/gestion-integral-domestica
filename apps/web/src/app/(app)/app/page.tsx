@@ -1,5 +1,5 @@
 import { Badge, buttonVariants, Card, CardContent } from "@gid/ui";
-import { ArrowRight, Bell, FileText, House, Plus } from "lucide-react";
+import { ArrowRight, Bell, CarFront, FileText, House, Plus } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -15,7 +15,8 @@ type DashboardDocument = {
   id: string;
   name: string;
   expiration_date: string;
-  property: { name: string };
+  property: { name: string; status: string } | null;
+  vehicle: { name: string; status: string } | null;
 };
 
 const statusCopy = {
@@ -25,6 +26,8 @@ const statusCopy = {
 } as const;
 
 export default async function DashboardPage() {
+  // ===== Contexto y fecha familiar =====
+
   const context = await getSessionContext();
   const supabase = await createClient();
   const family = context!.family!;
@@ -32,6 +35,7 @@ export default async function DashboardPage() {
 
   const [
     { data: propertyRows },
+    { data: vehicleRows },
     { data: documentRows },
     { count: unreadCount },
   ] = await Promise.all([
@@ -41,11 +45,17 @@ export default async function DashboardPage() {
       .eq("family_id", family.id)
       .eq("status", "active"),
     supabase
+      .from("vehicles")
+      .select("id")
+      .eq("family_id", family.id)
+      .eq("status", "active"),
+    supabase
       .from("documents")
-      .select("id, name, expiration_date, property:properties!inner(name)")
+      .select(
+        "id, name, expiration_date, property:properties(name, status), vehicle:vehicles(name, status)",
+      )
       .eq("family_id", family.id)
       .eq("status", "active")
-      .eq("properties.status", "active")
       .not("expiration_date", "is", null)
       .order("expiration_date", { ascending: true }),
     supabase
@@ -56,12 +66,20 @@ export default async function DashboardPage() {
   ]);
 
   const documents = (documentRows ?? []) as unknown as DashboardDocument[];
-  const attentionDocuments = documents.filter(
-    (document) =>
-      classifyExpiration(document.expiration_date, localDate) !== "later",
-  );
+  const attentionDocuments = documents.filter((document) => {
+    const hasActiveParent =
+      document.property?.status === "active" ||
+      document.vehicle?.status === "active";
 
-  if (!propertyRows?.length) {
+    return (
+      hasActiveParent &&
+      classifyExpiration(document.expiration_date, localDate) !== "later"
+    );
+  });
+
+  // ===== Estado inicial sin recursos =====
+
+  if (!propertyRows?.length && !vehicleRows?.length) {
     return (
       <section className="mx-auto max-w-3xl py-8 sm:py-16">
         <div className="max-w-xl">
@@ -69,29 +87,38 @@ export default async function DashboardPage() {
             Tu espacio está listo
           </p>
           <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl">
-            Agrega tu primera vivienda.
+            Agrega tu primera vivienda o vehículo.
           </h1>
           <p className="mt-4 text-base leading-7 text-[var(--color-text-secondary)]">
-            Será el contexto para guardar documentos y organizar sus
-            vencimientos.
+            Será el contexto para guardar documentos y organizar vencimientos.
           </p>
-          <Link
-            className={`${buttonVariants({ variant: "primary", size: "mobile" })} mt-7`}
-            href="/app/viviendas/nueva"
-          >
-            <Plus aria-hidden size={18} /> Agregar vivienda
-          </Link>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link
+              className={buttonVariants({ variant: "primary", size: "mobile" })}
+              href="/app/viviendas/nueva"
+            >
+              <Plus aria-hidden size={18} /> Agregar vivienda
+            </Link>
+            <Link
+              className={buttonVariants({ variant: "secondary", size: "mobile" })}
+              href="/app/vehiculos/nuevo"
+            >
+              <CarFront aria-hidden size={18} /> Agregar vehículo
+            </Link>
+          </div>
         </div>
         <Card className="mt-10 bg-[var(--color-surface-alt)] shadow-none">
           <CardContent className="grid gap-5 p-6 sm:grid-cols-3">
             <EmptyStep icon={House} number="1" text="Registra una vivienda" />
-            <EmptyStep icon={FileText} number="2" text="Guarda un documento" />
-            <EmptyStep icon={Bell} number="3" text="Configura su aviso" />
+            <EmptyStep icon={CarFront} number="2" text="O agrega un vehículo" />
+            <EmptyStep icon={Bell} number="3" text="Configura sus avisos" />
           </CardContent>
         </Card>
       </section>
     );
   }
+
+  // ===== Panel de próximos vencimientos =====
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -122,6 +149,11 @@ export default async function DashboardPage() {
             );
             const difference = daysUntil(document.expiration_date, localDate);
             if (status === "later") return null;
+            const parentName =
+              document.vehicle?.name ??
+              document.property?.name ??
+              "Sin contexto";
+
             return (
               <Link href={`/app/documentos/${document.id}`} key={document.id}>
                 <Card className="transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-overlay)]">
@@ -137,7 +169,7 @@ export default async function DashboardPage() {
                         <Badge status={status}>{statusCopy[status]}</Badge>
                       </div>
                       <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                        {document.property.name} ·{" "}
+                        {parentName} ·{" "}
                         {formatDate(document.expiration_date)}
                         {status === "upcoming" ? ` · ${difference} días` : ""}
                       </p>

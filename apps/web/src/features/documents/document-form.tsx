@@ -14,7 +14,7 @@ import {
   getFunctionErrorMessage,
 } from "./file-upload";
 
-const categories = [
+const propertyCategories = [
   ["deed", "Escritura"],
   ["contract", "Contrato"],
   ["insurance_policy", "Póliza de seguro"],
@@ -27,15 +27,34 @@ const categories = [
   ["other", "Otro"],
 ] as const;
 
+const vehicleCategories = [
+  ["registration_card", "Tarjeta de circulación"],
+  ["invoice", "Factura"],
+  ["insurance_policy", "Póliza de seguro"],
+  ["inspection", "Verificación"],
+  ["warranty", "Garantía"],
+  ["financing", "Financiamiento"],
+  ["manual", "Manual"],
+  ["other", "Otro"],
+] as const;
+
 export function DocumentForm({
   familyId,
   propertyId,
-  propertyName,
+  vehicleId,
+  parentName,
 }: {
   familyId: string;
-  propertyId: string;
-  propertyName: string;
+  propertyId?: string;
+  vehicleId?: string;
+  parentName: string;
 }) {
+  // ===== Configuración del recurso propietario =====
+
+  const isVehicleDocument = Boolean(vehicleId);
+  const categories = isVehicleDocument ? vehicleCategories : propertyCategories;
+  const parentLabel = isVehicleDocument ? "Vehículo" : "Vivienda";
+
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [file, setFile] = useState<File | null>(null);
@@ -146,7 +165,8 @@ export function DocumentForm({
             documentId,
             fileId,
             familyId,
-            propertyId,
+            propertyId: propertyId ?? null,
+            vehicleId: vehicleId ?? null,
             name: result.data.name,
             category: result.data.category,
             issueDate: result.data.issueDate || null,
@@ -214,8 +234,8 @@ export function DocumentForm({
       className="grid gap-5"
     >
       <p className="rounded-xl bg-[var(--color-surface-alt)] p-3 text-sm">
-        <span className="text-[var(--color-text-secondary)]">Vivienda:</span>{" "}
-        <strong>{propertyName}</strong>
+        <span className="text-[var(--color-text-secondary)]">{parentLabel}:</span>{" "}
+        <strong>{parentName}</strong>
       </p>
       {message ? (
         <p

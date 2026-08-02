@@ -16,6 +16,7 @@ export async function setDocumentArchivedAction(formData: FormData) {
 
   const documentId = String(formData.get("documentId"));
   const propertyId = String(formData.get("propertyId"));
+  const vehicleId = String(formData.get("vehicleId"));
   const version = Number(formData.get("version"));
   const archive = formData.get("archive") === "true";
   if (!documentId || !Number.isSafeInteger(version)) return;
@@ -32,10 +33,12 @@ export async function setDocumentArchivedAction(formData: FormData) {
 
   // ===== Actualización de la interfaz =====
 
-  revalidatePath(`/app/viviendas/${propertyId}`);
-  redirect(
-    archive ? `/app/viviendas/${propertyId}` : `/app/documentos/${documentId}`,
-  );
+  const parentPath = vehicleId
+    ? `/app/vehiculos/${vehicleId}`
+    : `/app/viviendas/${propertyId}`;
+
+  revalidatePath(parentPath);
+  redirect(archive ? parentPath : `/app/documentos/${documentId}`);
 }
 
 export async function attendReminderAction(formData: FormData) {

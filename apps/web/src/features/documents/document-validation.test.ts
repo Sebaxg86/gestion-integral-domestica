@@ -47,6 +47,21 @@ describe("validación documental", () => {
     expect(result.success).toBe(true);
   });
 
+  it("acepta una categoría documental vehicular", () => {
+    // ===== Ejecución =====
+
+    const result = documentSchema.safeParse({
+      name: "Tarjeta de circulación",
+      category: "registration_card",
+      expirationDate: "2027-07-31",
+      leadDays: 7,
+    });
+
+    // ===== Verificación =====
+
+    expect(result.success).toBe(true);
+  });
+
   it("rechaza frecuencias de repetición no soportadas", () => {
     // ===== Ejecución =====
 

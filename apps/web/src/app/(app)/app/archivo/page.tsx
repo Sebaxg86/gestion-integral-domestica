@@ -23,7 +23,7 @@ export default async function ArchivePage() {
         .order("updated_at", { ascending: false }),
       supabase
         .from("documents")
-        .select("id, property_id, name, version")
+        .select("id, property_id, vehicle_id, name, version")
         .eq("family_id", context!.family!.id)
         .eq("status", "archived")
         .order("updated_at", { ascending: false }),
@@ -168,7 +168,12 @@ export default async function ArchivePage() {
                     <input
                       type="hidden"
                       name="propertyId"
-                      value={document.property_id}
+                      value={document.property_id ?? ""}
+                    />
+                    <input
+                      type="hidden"
+                      name="vehicleId"
+                      value={document.vehicle_id ?? ""}
                     />
                     <input
                       type="hidden"

@@ -17,6 +17,10 @@ const categories = [
   ["warranty", "Garantía"],
   ["invoice", "Factura"],
   ["permit", "Permiso"],
+  ["registration_card", "Tarjeta de circulación"],
+  ["inspection", "Verificación"],
+  ["financing", "Financiamiento"],
+  ["manual", "Manual"],
   ["other", "Otro"],
 ] as const;
 
