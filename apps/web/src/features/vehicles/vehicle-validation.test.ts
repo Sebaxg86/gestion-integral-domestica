@@ -1,4 +1,6 @@
 import {
+  vehicleMileageReadingSchema,
+  vehicleMileageReminderSchema,
   vehicleSchema,
   vehicleServiceItemSchema,
   vehicleServicePartSchema,
@@ -114,5 +116,42 @@ describe("validación del detalle de mantenimiento", () => {
 
     expect(zeroQuantity.success).toBe(false);
     expect(negativeQuantity.success).toBe(false);
+  });
+});
+
+describe("validación del kilometraje vehicular", () => {
+  it("acepta una lectura y una frecuencia periódica válidas", () => {
+    // ===== Ejecución =====
+
+    const reading = vehicleMileageReadingSchema.safeParse({
+      mileage: 32450,
+      recordedOn: "2026-08-01",
+      notes: "Lectura mensual",
+    });
+    const reminder = vehicleMileageReminderSchema.safeParse({
+      intervalDays: "30",
+    });
+
+    // ===== Verificación =====
+
+    expect(reading.success).toBe(true);
+    expect(reminder.success).toBe(true);
+  });
+
+  it("rechaza kilometraje negativo y frecuencias no permitidas", () => {
+    // ===== Ejecución =====
+
+    const reading = vehicleMileageReadingSchema.safeParse({
+      mileage: -1,
+      recordedOn: "2026-08-01",
+    });
+    const reminder = vehicleMileageReminderSchema.safeParse({
+      intervalDays: "15",
+    });
+
+    // ===== Verificación =====
+
+    expect(reading.success).toBe(false);
+    expect(reminder.success).toBe(false);
   });
 });

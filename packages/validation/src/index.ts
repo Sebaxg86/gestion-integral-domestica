@@ -190,6 +190,23 @@ export const vehicleServicePartSchema = z.object({
   notes: z.string().trim().max(1000).optional(),
 });
 
+// ===== Seguimiento del kilometraje =====
+
+export const vehicleMileageReadingSchema = z.object({
+  mileage: z.coerce
+    .number()
+    .int("El kilometraje debe ser un número entero.")
+    .min(0, "El kilometraje no puede ser negativo."),
+  recordedOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Selecciona una fecha válida."),
+  notes: z.string().trim().max(1000).optional(),
+});
+
+export const vehicleMileageReminderSchema = z.object({
+  intervalDays: z.enum(["off", "30", "60", "90"]),
+});
+
 // ===== Documentos y recordatorios =====
 
 export const documentNameSchema = z

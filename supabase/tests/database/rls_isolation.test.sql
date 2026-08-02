@@ -5,7 +5,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(18);
+select plan(23);
 
 -- ===== Preparación de usuarios y recursos aislados =====
 
@@ -57,17 +57,17 @@ insert into public.documents (
 -- ===== Preparación del detalle vehicular aislado =====
 
 insert into public.vehicles (
-  id, family_id, name, type, created_by_user_id, updated_by_user_id
+  id, family_id, name, type, mileage, created_by_user_id, updated_by_user_id
 ) values
   (
     '11120000-0000-4000-8000-000000000001',
-    '11000000-0000-4000-8000-000000000001', 'Vehículo A', 'car',
+    '11000000-0000-4000-8000-000000000001', 'Vehículo A', 'car', 10000,
     '10000000-0000-4000-8000-000000000001',
     '10000000-0000-4000-8000-000000000001'
   ),
   (
     '22220000-0000-4000-8000-000000000002',
-    '22000000-0000-4000-8000-000000000002', 'Vehículo B', 'car',
+    '22000000-0000-4000-8000-000000000002', 'Vehículo B', 'car', 20000,
     '20000000-0000-4000-8000-000000000002',
     '20000000-0000-4000-8000-000000000002'
   );
@@ -199,6 +199,46 @@ select is((select count(*) from public.vehicle_services), 1::bigint, 'solo el se
 select is((select count(*) from public.vehicle_service_items), 1::bigint, 'solo el trabajo propio es visible');
 select is((select count(*) from public.vehicle_service_parts), 1::bigint, 'solo la refacción propia es visible');
 select is((select count(*) from public.vehicle_service_attachments), 1::bigint, 'solo el adjunto propio es visible');
+
+-- ===== Verificación del seguimiento de kilometraje =====
+
+select is(
+  (select count(*) from public.vehicle_mileage_readings),
+  1::bigint,
+  'solo la lectura de kilometraje propia es visible'
+);
+
+select lives_ok(
+  $$select public.record_vehicle_mileage(
+    '11121400-0000-4000-8000-000000000001',
+    '11120000-0000-4000-8000-000000000001',
+    15000, current_date, 'Lectura de prueba'
+  )$$,
+  'el propietario puede registrar una lectura mayor'
+);
+
+select is(
+  (select mileage from public.vehicles where id = '11120000-0000-4000-8000-000000000001'),
+  15000,
+  'la lectura mayor actualiza el kilometraje actual'
+);
+
+select lives_ok(
+  $$select public.configure_vehicle_mileage_reminder(
+    '11120000-0000-4000-8000-000000000001', 30::smallint
+  )$$,
+  'el propietario puede configurar el aviso periódico'
+);
+
+select is(
+  (
+    select count(*) from public.reminders
+    where vehicle_id = '11120000-0000-4000-8000-000000000001'
+      and status = 'scheduled'
+  ),
+  1::bigint,
+  'el vehículo conserva un único aviso periódico abierto'
+);
 
 -- ===== Verificación de recordatorios recurrentes =====
 

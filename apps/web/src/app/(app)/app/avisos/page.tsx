@@ -14,6 +14,7 @@ type NotificationRow = {
   created_at: string;
   reminder: {
     document_id: string | null;
+    vehicle_id: string | null;
     vehicle_service: { id: string; vehicle_id: string } | null;
   };
 };
@@ -26,9 +27,16 @@ function getNotificationPath(notification: NotificationRow) {
   }
 
   const service = notification.reminder.vehicle_service;
-  return service
-    ? `/app/vehiculos/${service.vehicle_id}/mantenimientos/${service.id}`
-    : "/app/avisos";
+
+  if (service) {
+    return `/app/vehiculos/${service.vehicle_id}/mantenimientos/${service.id}`;
+  }
+
+  if (notification.reminder.vehicle_id) {
+    return `/app/vehiculos/${notification.reminder.vehicle_id}`;
+  }
+
+  return "/app/avisos";
 }
 
 export default async function NotificationsPage() {
@@ -37,7 +45,7 @@ export default async function NotificationsPage() {
   const { data } = await supabase
     .from("notifications")
     .select(
-      "id, title, message, status, created_at, reminder:reminders(document_id, vehicle_service:vehicle_services(id, vehicle_id))",
+      "id, title, message, status, created_at, reminder:reminders(document_id, vehicle_id, vehicle_service:vehicle_services(id, vehicle_id))",
     )
     .eq("family_id", context!.family!.id)
     .order("created_at", { ascending: false })

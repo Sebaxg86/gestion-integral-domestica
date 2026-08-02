@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   CarFront,
   FileText,
-  Gauge,
   Pencil,
   Plus,
   Wrench,
@@ -12,7 +11,11 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getLocalDate } from "@/features/documents/expiration";
+import { getMileageAttention } from "@/features/vehicle-mileage/attention";
+import { VehicleMileageSection } from "@/features/vehicle-mileage/mileage-section";
 import { setVehicleArchivedAction } from "@/features/vehicles/actions";
+import { getSessionContext } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 const typeLabels: Record<string, string> = {
@@ -60,16 +63,25 @@ function getServiceSummary(
 ) {
   // ===== Prioridad del próximo mantenimiento =====
 
-  if (
-    service.next_due_mileage !== null &&
-    currentMileage !== null &&
-    currentMileage >= service.next_due_mileage
-  ) {
+  const mileageAttention = getMileageAttention(
+    service.next_due_mileage,
+    currentMileage,
+  );
+
+  if (mileageAttention?.due) {
     return "Requiere atención por kilometraje";
+  }
+
+  if (mileageAttention?.upcoming) {
+    return `Faltan ${mileageAttention.remainingMileage.toLocaleString("es-MX")} km`;
   }
 
   if (service.next_due_date) {
     return `Próximo: ${service.next_due_date}`;
+  }
+
+  if (service.next_due_mileage !== null) {
+    return `Próximo a los ${service.next_due_mileage.toLocaleString("es-MX")} km`;
   }
 
   return service.service_date || "Sin fecha";
@@ -87,9 +99,15 @@ export default async function VehicleDetailPage({
   // ===== Consulta del vehículo =====
 
   const { vehicleId } = await params;
+  const context = await getSessionContext();
   const supabase = await createClient();
-  const [{ data: vehicle }, { data: documents }, { data: services }] =
-    await Promise.all([
+  const [
+    { data: vehicle },
+    { data: documents },
+    { data: services },
+    { data: mileageReadings },
+    { data: mileageReminder },
+  ] = await Promise.all([
       supabase
         .from("vehicles")
         .select(
@@ -111,19 +129,31 @@ export default async function VehicleDetailPage({
         .eq("vehicle_id", vehicleId)
         .order("service_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false }),
+      supabase
+        .from("vehicle_mileage_readings")
+        .select("id, mileage, recorded_on, source, notes")
+        .eq("vehicle_id", vehicleId)
+        .order("recorded_on", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("reminders")
+        .select("repeat_interval_days")
+        .eq("vehicle_id", vehicleId)
+        .in("status", ["scheduled", "notified"])
+        .maybeSingle(),
     ]);
 
-  if (!vehicle) notFound();
+  if (!vehicle) {
+    notFound();
+  }
 
   // ===== Preparación de datos visibles =====
 
   const identity = [vehicle.model_year, vehicle.make, vehicle.model]
     .filter(Boolean)
     .join(" · ");
-  const mileage =
-    vehicle.mileage === null
-      ? "No indicado"
-      : `${new Intl.NumberFormat("es-MX").format(vehicle.mileage)} km`;
+  const currentDate = getLocalDate(context!.family!.timezone);
 
   // ===== Renderizado principal =====
 
@@ -168,23 +198,16 @@ export default async function VehicleDetailPage({
         ) : null}
       </div>
 
-      {/* ===== Resumen operativo ===== */}
+      {/* ===== Seguimiento del kilometraje ===== */}
 
-      <Card className="mt-8 bg-[var(--color-surface-alt)] shadow-none">
-        <CardContent className="flex items-center gap-4 p-5">
-          <Gauge
-            aria-hidden
-            className="text-[var(--color-brand-800)]"
-            size={22}
-          />
-          <div>
-            <p className="text-xs text-[var(--color-text-secondary)]">
-              Kilometraje actual
-            </p>
-            <p className="mt-0.5 font-semibold">{mileage}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <VehicleMileageSection
+        vehicleId={vehicle.id}
+        currentMileage={vehicle.mileage}
+        currentDate={currentDate}
+        readings={mileageReadings ?? []}
+        reminderIntervalDays={mileageReminder?.repeat_interval_days ?? null}
+        active={vehicle.status === "active"}
+      />
 
       {/* ===== Información registrada ===== */}
 

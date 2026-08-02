@@ -16,6 +16,7 @@ import {
   formatDate,
   getLocalDate,
 } from "@/features/documents/expiration";
+import { getMileageAttention } from "@/features/vehicle-mileage/attention";
 import { getSessionContext } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
@@ -41,6 +42,31 @@ const statusCopy = {
   today: "Vence hoy",
   upcoming: "Próximo",
 } as const;
+
+function getServiceAttentionSummary(service: DashboardService) {
+  // ===== Prioridad del vencimiento por kilometraje =====
+
+  const mileageAttention = getMileageAttention(
+    service.next_due_mileage,
+    service.vehicle.mileage,
+  );
+
+  if (mileageAttention?.due) {
+    return "Kilometraje alcanzado";
+  }
+
+  if (mileageAttention?.upcoming) {
+    return `Faltan ${mileageAttention.remainingMileage.toLocaleString("es-MX")} km`;
+  }
+
+  // ===== Respaldo para vencimientos por fecha =====
+
+  if (service.next_due_date) {
+    return formatDate(service.next_due_date);
+  }
+
+  return "Revisar mantenimiento";
+}
 
 export default async function DashboardPage() {
   // ===== Contexto y fecha familiar =====
@@ -108,10 +134,11 @@ export default async function DashboardPage() {
     const dueByDate = service.next_due_date
       ? classifyExpiration(service.next_due_date, localDate) !== "later"
       : false;
-    const dueByMileage =
-      service.next_due_mileage !== null &&
-      service.vehicle.mileage !== null &&
-      service.vehicle.mileage >= service.next_due_mileage;
+    const mileageAttention = getMileageAttention(
+      service.next_due_mileage,
+      service.vehicle.mileage,
+    );
+    const dueByMileage = mileageAttention?.upcoming ?? false;
 
     return dueByDate || dueByMileage;
   });
@@ -256,10 +283,8 @@ export default async function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold">{service.title}</p>
                       <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                        {service.vehicle.name}
-                        {service.next_due_date
-                          ? ` · ${formatDate(service.next_due_date)}`
-                          : " · Atención por kilometraje"}
+                        {service.vehicle.name} ·{" "}
+                        {getServiceAttentionSummary(service)}
                       </p>
                     </div>
                     <Badge status="upcoming">Revisar</Badge>
