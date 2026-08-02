@@ -14,6 +14,8 @@ const typeLabels: Record<string, string> = {
 };
 
 export default async function PropertiesPage() {
+  // ===== Consulta de viviendas activas =====
+
   const context = await getSessionContext();
   const supabase = await createClient();
   const { data: properties } = await supabase
@@ -22,6 +24,8 @@ export default async function PropertiesPage() {
     .eq("family_id", context!.family!.id)
     .eq("status", "active")
     .order("updated_at", { ascending: false });
+
+  // ===== Renderizado principal =====
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -42,31 +46,41 @@ export default async function PropertiesPage() {
         </Link>
       </div>
 
-      <div className="mt-7 grid gap-3">
+      {/* ===== Viviendas disponibles ===== */}
+
+      <div className="mt-7 grid min-w-0 gap-3">
         {properties?.length ? (
-          properties.map((property) => (
-            <Link href={`/app/viviendas/${property.id}`} key={property.id}>
-              <Card className="transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-overlay)]">
-                <CardContent className="flex items-center gap-4 p-4 sm:p-5">
-                  <span className="grid size-11 place-items-center rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-brand-800)]">
-                    <House aria-hidden size={20} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{property.name}</p>
-                    <p className="mt-1 truncate text-sm text-[var(--color-text-secondary)]">
-                      {typeLabels[property.type] ?? property.type}
-                      {property.address ? ` · ${property.address}` : ""}
-                    </p>
-                  </div>
-                  <ArrowRight
-                    aria-hidden
-                    className="text-[var(--color-text-disabled)]"
-                    size={18}
-                  />
-                </CardContent>
-              </Card>
-            </Link>
-          ))
+          properties.map((property) => {
+            // ------- Limitar la tarjeta al ancho disponible del dispositivo -------
+
+            return (
+              <Link
+                className="block min-w-0 max-w-full"
+                href={`/app/viviendas/${property.id}`}
+                key={property.id}
+              >
+                <Card className="min-w-0 max-w-full overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-overlay)]">
+                  <CardContent className="flex min-w-0 items-center gap-4 p-4 sm:p-5">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--color-surface-alt)] text-[var(--color-brand-800)]">
+                      <House aria-hidden size={20} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{property.name}</p>
+                      <p className="mt-1 truncate text-sm text-[var(--color-text-secondary)]">
+                        {typeLabels[property.type] ?? property.type}
+                        {property.address ? ` · ${property.address}` : ""}
+                      </p>
+                    </div>
+                    <ArrowRight
+                      aria-hidden
+                      className="shrink-0 text-[var(--color-text-disabled)]"
+                      size={18}
+                    />
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })
         ) : (
           <Card className="bg-[var(--color-surface-alt)] shadow-none">
             <CardContent className="p-8 text-center">
